@@ -437,7 +437,8 @@ function ChatInterface({
         className="flex-1 overflow-y-auto overscroll-contain scrollbar-none"
         style={{ scrollbarWidth: 'none' } as React.CSSProperties}
       >
-          /* ── Empty state with centered input (ChatGPT/Claude style) ── */
+        {allMessages.length === 0 ? (
+          {/* ── Empty state with centered input (ChatGPT/Claude style) ── */}
           <div className="flex h-full flex-col items-center justify-center px-4 text-center">
             <div className="w-full max-w-2xl flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
               <div className="flex h-16 w-16 items-center justify-center mb-4">
@@ -501,7 +502,7 @@ function ChatInterface({
             </div>
           </div>
         ) : (
-          /* ── Messages ── */
+          {/* ── Messages ── */}
           <div className="pb-4">
             {allMessages.map((m, idx) => {
               const text = getMessageText(m)
