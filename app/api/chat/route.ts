@@ -101,20 +101,24 @@ async function executeTool(
   cerebras: InstanceType<typeof Cerebras>
 ): Promise<string> {
   if (name === 'save_task') {
-    console.log(`[AI Tool] Executing 'save_task':`, args)
+    const rawTitle = args?.title || args?.task || args?.name || 'New Task'
+    const title = String(rawTitle).trim() || 'New Task'
+    const description = args?.description ? String(args.description).trim() : null
+
+    console.log(`[AI Tool] Executing 'save_task':`, { title, description })
     const task = await prisma.task.create({
-      data: { workspaceId, title: args.title, description: args.description },
+      data: { workspaceId, title, description },
     })
     await prisma.toolExecution.create({
       data: {
         workspaceId,
         toolName: 'save_task',
-        arguments: args,
-        result: { taskId: task.id, status: 'success' },
+        arguments: args || {},
+        result: { taskId: task.id, status: 'success', title },
       },
     })
     console.log(`[AI Tool] 'save_task' created task id=${task.id}`)
-    return `Task "${args.title}" created successfully.`
+    return `Task "${title}" created successfully.`
   }
 
   if (name === 'summarize_workspace') {

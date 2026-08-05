@@ -74,6 +74,17 @@ export async function POST(req: NextRequest) {
       .from('documents')
       .getPublicUrl(uploadData.path)
 
+    // Idempotency check: Clean up existing documents with the same filename in this workspace
+    const existingDocs = await prisma.document.findMany({
+      where: { workspaceId, filename: file.name }
+    })
+    if (existingDocs.length > 0) {
+      const existingIds = existingDocs.map(d => d.id)
+      console.log(`[DocUpload] Idempotency cleanup: deleting ${existingIds.length} existing document(s) with filename "${file.name}" in workspace ${workspaceId}`)
+      await prisma.documentChunk.deleteMany({ where: { documentId: { in: existingIds } } })
+      await prisma.document.deleteMany({ where: { id: { in: existingIds } } })
+    }
+
     const document = await prisma.document.create({
       data: {
         workspaceId,
