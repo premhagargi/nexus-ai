@@ -102,7 +102,7 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Upload a PDF, DOCX, or TXT file to your workspace.
+            Upload a PDF, DOCX, TXT, MD, or CSV file to your workspace.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
@@ -113,7 +113,7 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
                 id="file" 
                 name="file" 
                 type="file" 
-                accept=".pdf,.docx,.txt" 
+                accept=".pdf,.docx,.txt,.md,.csv" 
                 onChange={handleFileChange}
                 ref={fileInputRef}
                 disabled={uploading} 

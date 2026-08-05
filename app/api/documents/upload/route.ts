@@ -6,49 +6,70 @@ import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai'
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
 import { TaskType } from '@google/generative-ai'
 import mammoth from 'mammoth'
+// @ts-ignore
+import pdfParse from 'pdf-parse'
+
+export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 minutes for serverless processing
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md', 'csv']
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession()
     if (!session?.userId) {
+      console.warn('[DocUpload] Unauthorized upload attempt')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const formData = await req.formData()
-    const file = formData.get('file') as File
-    const workspaceId = formData.get('workspaceId') as string
+    const file = formData.get('file') as File | null
+    const workspaceId = formData.get('workspaceId') as string | null
 
     if (!file || !workspaceId) {
+      console.warn('[DocUpload] Missing file or workspaceId in request body')
       return NextResponse.json({ error: 'Missing file or workspaceId' }, { status: 400 })
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      console.warn(`[DocUpload] File size limit exceeded: ${file.size} bytes`)
+      return NextResponse.json({ error: 'File size exceeds maximum allowed limit of 20MB' }, { status: 400 })
+    }
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
+      console.warn(`[DocUpload] Unsupported extension: .${fileExt}`)
+      return NextResponse.json({ error: `Unsupported file format: .${fileExt}. Allowed formats are PDF, DOCX, TXT, MD, CSV.` }, { status: 400 })
+    }
+
+    // Verify workspace membership
+    const membership = await prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: session.userId } }
+    })
+    if (!membership) {
+      console.warn(`[DocUpload] User ${session.userId} has no membership in workspace ${workspaceId}`)
+      return NextResponse.json({ error: 'Forbidden: You do not have access to this workspace' }, { status: 403 })
     }
 
     const supabase = await createClient()
 
-    // Ensure 'documents' bucket exists
-    try {
-      const { data: buckets } = await supabase.storage.listBuckets()
-      if (!buckets?.some(b => b.name === 'documents')) {
-        await supabase.storage.createBucket('documents', { public: true })
-      }
-    } catch (e) {
-      console.warn('Bucket check warning:', e)
-    }
-
-    // Upload to Supabase Storage using Buffer
-    const fileExt = file.name.split('.').pop()
+    // Upload file to Supabase Storage bucket
     const fileName = `${workspaceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
     const fileBuffer = Buffer.from(await file.arrayBuffer())
-    
+
+    console.log(`[DocUpload] Uploading "${file.name}" (${file.size} bytes) to storage path "${fileName}"...`)
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('documents')
       .upload(fileName, fileBuffer, {
         contentType: file.type || 'application/octet-stream',
-        upsert: true
+        upsert: false
       })
 
     if (uploadError) {
-      console.error('[Supabase Storage Error]:', uploadError)
-      throw uploadError
+      console.error('[DocUpload] Supabase storage upload error:', uploadError)
+      return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
     const { data: publicUrlData } = supabase.storage
@@ -65,96 +86,147 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Process async
-    processDocument(document.id, uploadData.path, workspaceId, file.name).catch(console.error)
+    console.log(`[DocUpload] Created document record ${document.id}. Launching background process...`)
+
+    // Launch background text extraction & vector embedding process
+    processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
+      console.error(`[DocUpload] Background process error for document ${document.id}:`, err)
+    })
 
     return NextResponse.json({ success: true, documentId: document.id })
   } catch (error: any) {
-    console.error('[Upload Route Error]:', error)
-    return NextResponse.json({ error: error.message || 'Failed to upload document' }, { status: 500 })
+    console.error('[DocUpload] POST Route Handler Error:', error)
+    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })
   }
 }
 
 async function processDocument(documentId: string, storagePath: string, workspaceId: string, filename: string) {
+  console.log(`[DocUpload] Processing started for documentId=${documentId}, filename="${filename}"`)
   try {
+    // Idempotency check: remove any existing chunks for this document ID
+    await prisma.documentChunk.deleteMany({ where: { documentId } })
+
     const supabase = await createClient()
-    
+
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
       .download(storagePath)
 
-    if (downloadError || !fileData) throw new Error('Failed to download file')
+    if (downloadError || !fileData) {
+      throw new Error(`Failed to download storage file: ${downloadError?.message || 'Payload empty'}`)
+    }
 
     const buffer = Buffer.from(await fileData.arrayBuffer())
-    const ext = filename.split('.').pop()?.toLowerCase()
-    
+    const ext = filename.split('.').pop()?.toLowerCase() || ''
+
     let text = ''
     if (ext === 'pdf') {
-      try {
-        const pdfParse = require('pdf-parse')
-        const parseFn = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse.parse)
-        if (typeof parseFn === 'function') {
-          const parsed = await parseFn(buffer)
-          text = parsed.text || ''
-        } else {
-          text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ')
-        }
-      } catch (pdfErr) {
-        console.warn('PDF parsing fallback applied:', pdfErr)
-        text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+      const parseFn = typeof pdfParse === 'function' ? pdfParse : (pdfParse as any).default || (pdfParse as any).parse
+      if (typeof parseFn !== 'function') {
+        throw new Error('PDF parser engine initialization failed')
+      }
+      const parsed = await parseFn(buffer)
+      text = parsed.text || ''
+      if (!text.trim()) {
+        throw new Error('Could not extract text from PDF. The file may be scanned or image-only.')
       }
     } else if (ext === 'docx') {
       const result = await mammoth.extractRawText({ buffer })
-      text = result.value
+      text = result.value || ''
+      if (!text.trim()) {
+        throw new Error('Could not extract text from DOCX file. The file may be empty or corrupted.')
+      }
     } else {
       text = buffer.toString('utf-8')
     }
 
+    // Sanitize null bytes
+    text = text.replace(/\u0000/g, '')
+
     if (!text.trim()) {
-      throw new Error('No text extracted from document')
+      throw new Error('Document contains no extractable text.')
     }
 
-    // Chunking
+    console.log(`[DocUpload] Extracted ${text.length} characters from "${filename}". Splitting text...`)
+
+    // Recursive text splitting
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200,
     })
-    
+
     const docs = await splitter.createDocuments([text], [{ source: filename }])
-    
-    // Embeddings
+    console.log(`[DocUpload] Text split into ${docs.length} chunk(s).`)
+
+    // Embeddings Setup
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const embeddings = new GoogleGenerativeAIEmbeddings({
       model: "text-embedding-004",
       taskType: TaskType.RETRIEVAL_DOCUMENT,
       apiKey,
     })
-    
-    for (const doc of docs) {
-      const vector = await embeddings.embedQuery(doc.pageContent)
-      const vectorStr = `[${vector.join(',')}]`
 
-      await prisma.$executeRaw`
-        INSERT INTO "DocumentChunk" (id, "workspaceId", "documentId", content, embedding, metadata, "createdAt")
-        VALUES (
-          gen_random_uuid(), 
-          ${workspaceId}, 
-          ${documentId}, 
-          ${doc.pageContent}, 
-          ${vectorStr}::vector, 
-          ${doc.metadata}::jsonb, 
-          NOW()
-        )
-      `
+    // Batched embedding and insertion
+    const BATCH_SIZE = 20
+    const chunks = docs.map(d => d.pageContent)
+
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE)
+      const batchDocs = docs.slice(i, i + BATCH_SIZE)
+
+      let vectors: number[][]
+      try {
+        vectors = await embeddings.embedDocuments(batch)
+      } catch (err) {
+        console.warn(`[DocUpload] Batch ${Math.floor(i / BATCH_SIZE) + 1} embedding failed. Retrying in 2 seconds...`, err)
+        await new Promise(r => setTimeout(r, 2000))
+        vectors = await embeddings.embedDocuments(batch)
+      }
+
+      // Insert all chunks from this batch in a transaction
+      await prisma.$transaction(
+        vectors.map((vector, j) => {
+          const vectorStr = `[${vector.join(',')}]`
+          const metaJson = JSON.stringify(batchDocs[j].metadata || {})
+          return prisma.$executeRaw`
+            INSERT INTO "DocumentChunk" (id, "workspaceId", "documentId", content, embedding, metadata, "createdAt")
+            VALUES (
+              gen_random_uuid(),
+              ${workspaceId},
+              ${documentId},
+              ${batchDocs[j].pageContent},
+              ${vectorStr}::vector,
+              ${metaJson}::jsonb,
+              NOW()
+            )
+          `
+        })
+      )
+
+      console.log(`[DocUpload] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1} / ${Math.ceil(chunks.length / BATCH_SIZE)} into vector database.`)
+
+      if (i + BATCH_SIZE < chunks.length) {
+        await new Promise(r => setTimeout(r, 300))
+      }
     }
-    
+
+    // Update document status to COMPLETED
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'COMPLETED' }
     })
-    
-  } catch (error) {
-    console.error('Error in processDocument:', error)
+
+    console.log(`[DocUpload] Successfully processed documentId=${documentId} (${docs.length} total chunks).`)
+  } catch (error: any) {
+    console.error(`[DocUpload] Processing failed for documentId=${documentId}:`, error)
+
+    // Clean up partial chunks on failure
+    try {
+      await prisma.documentChunk.deleteMany({ where: { documentId } })
+    } catch (cleanupErr) {
+      console.error(`[DocUpload] Failed to clean up chunks for documentId=${documentId}:`, cleanupErr)
+    }
+
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'FAILED' }
