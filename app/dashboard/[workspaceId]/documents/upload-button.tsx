@@ -18,7 +18,9 @@ import {
   AttachmentTitle,
 } from "@/components/ui/attachment"
 
-export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
+import { Document } from '@prisma/client'
+
+export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspaceId: string, onUploadStart?: (doc: Document) => void }) {
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -27,8 +29,25 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!selectedFile) return
+    const file = selectedFile
+    if (!file) return
     
+    // Close immediately
+    setOpen(false)
+    setSelectedFile(null)
+
+    if (onUploadStart) {
+      onUploadStart({
+        id: 'optimistic-' + Date.now(),
+        filename: file.name,
+        status: 'PROCESSING',
+        createdAt: new Date(),
+        workspaceId,
+        storageUrl: '',
+        uploadedBy: ''
+      })
+    }
+
     setUploading(true)
     
     try {
@@ -47,8 +66,6 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
       }
 
       toast.success('Document uploaded and processing started!')
-      setOpen(false)
-      setSelectedFile(null)
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload document')
