@@ -57,8 +57,8 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
     <Sidebar className="border-r border-white/5 bg-background/40 backdrop-blur-2xl shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
       <SidebarHeader className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-3 px-2 pb-6 mb-2 border-b border-white/5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-            <Sparkles className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 border border-white/10 bg-background">
+            <img src="/ai-magic-icon.webp" alt="Nexus AI" className="h-full w-full object-cover" />
           </div>
           <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Nexus AI</span>
         </div>
