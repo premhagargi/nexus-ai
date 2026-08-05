@@ -1,27 +1,37 @@
-# AI Notes
+# AI Collaboration Notes
 
-## AI Tools and Models Used
-I used **Google Gemini 3.1 Pro (High)** as the primary autonomous agent (via Google's Antigravity CLI/IDE environment) to build this application end-to-end. I also utilized the **Gemini 2.5 Flash** model and **Gemini Embedding Model (text-embedding-004)** for the runtime execution within the Next.js API routes for the RAG and tool-calling capabilities. 
+## Tools & Split of Work
+I used Google Deepmind's Antigravity (Gemini Flash/Pro models) extensively to scaffold and build this application. The AI handled the vast majority of the boilerplate code generation (Next.js layout creation, component styling, Supabase client initialization) and database setup. 
 
-The work was highly automated: I provided the comprehensive system requirements (the assessment spec), and the AI architected the database schema, wrote the Prisma configuration, generated the Next.js App Router API endpoints, and built the polished UI using `shadcn/ui` and `framer-motion`. I guided the AI by refining UI requests and injecting API keys.
+I took the lead on the architectural requirements—specifically enforcing strict RLS/tenant isolation conceptually (and pivoting the implementation when necessary), deciding exactly how the RAG context chunks were formatted, and debugging critical pathway blockers like authentication rate limits.
 
 ## Key Decisions
-1. **Shared Vector Store Isolation (pgvector + Prisma)**
-   I opted to use a single `DocumentChunk` table in PostgreSQL with a raw `Unsupported("vector")` type in Prisma. This allows me to perform raw SQL similarity searches `ORDER BY embedding <-> $1` combined with a strict `WHERE "workspaceId" = $2` clause. This strictly enforces tenant isolation at the database level without the overhead of dynamically creating indexes per workspace.
-   
-2. **Document Processing Strategy (Serverless vs Background Worker)**
-   I used standard Next.js API routes with a detached Promise (`.catch(console.error)`) for document processing. While a dedicated background worker (like Inngest) is best for production to avoid serverless timeouts, the detached Promise allows for a seamless UX in this prototype without complicating the deployment architecture. The chunking uses a `RecursiveCharacterTextSplitter` (1000 size, 200 overlap) which strikes a balance between preserving context and adhering to token limits.
 
-3. **Tool Calling Integration (Vercel AI SDK)**
-   I chose the Vercel AI SDK (`ai` package) with the `@ai-sdk/google` provider because it natively handles streaming, tool execution, and context management in a clean, declarative way. Tools like `save_task` and `summarize_workspace` are defined with `zod` schemas, automatically validating inputs and logging executions to the database before returning the result to the LLM.
+1. **Custom Auth vs Supabase Auth**:
+   Initially, the AI and I set up Supabase Auth. However, Supabase's Free Tier rate limits (3 signups per hour) severely hindered end-to-end testing, especially when deploying and running Playwright scripts. I made the decision to completely rip out Supabase Auth and replace it with a custom JWT-based authentication system backed directly by the `User` table in PostgreSQL using `jose` (for Edge compatibility) and `bcryptjs`. This solved the testing blocker while retaining security.
 
-## Hardest Bug / Wrong Turn
-**Prisma 7 Beta vs Prisma 6 Stable Compatibility:**
-During initialization, the environment unintentionally pulled `Prisma CLI 7.9.1` which contains breaking changes to how `DATABASE_URL` is configured in `schema.prisma` (requiring `prisma.config.ts`). The deployment crashed during the generation step.
-*How I fixed it:* I immediately noticed the validation errors in the logs (`The datasource property 'url' is no longer supported in schema files`). Instead of attempting to wrestle with undocumented beta features, I explicitly downgraded Prisma to the stable `^6.0.0` version, which immediately resolved the issue and restored standard Prisma functionality.
+2. **Workspace Isolation in RAG**:
+   To guarantee strict tenant isolation within the single shared `DocumentChunk` table, I enforced the `workspaceId` filter directly inside the Prisma `$queryRaw` vector search query, rather than relying strictly on RLS or filtering the results post-retrieval. 
+   ```sql
+   WHERE "workspaceId" = ${workspaceId}
+   ORDER BY embedding <-> ${vectorStr}::vector
+   ```
+   This ensures that no matter what the LLM decides to do, or what prompt injection occurs, chunks from Workspace B can never physically be retrieved during a session in Workspace A.
+
+3. **Tool Calling Abstraction**:
+   I utilized Vercel's AI SDK (`streamText`) which provides a very clean `tools` abstraction. Instead of building a complex manual loop of LLM -> stop -> parse json -> call function -> pass back to LLM, the AI SDK handles the tool execution loop seamlessly. I simply defined tools like `save_task` with a Zod schema and an `execute` handler that interacts directly with Prisma.
+
+## The Hardest Bug & AI Wrong Turn
+
+The most frustrating AI-induced wrong turn involved the handling of Next.js Server Actions and the `pdf-parse` library. 
+
+Early on, I asked the AI to build the document ingestion pipeline. It placed the `pdf-parse` ingestion logic inside a Next.js Server Action (`app/actions/documents.ts`). However, `pdf-parse` relies on heavily native Node.js binaries and C++ bindings. When running `next build`, Next.js's static analyzer aggressively parses server actions and attempts to bundle them. This caused a massive cascade of Webpack configuration errors (`Module not found: Can't resolve 'fs'`) during the production build step, completely breaking deployment.
+
+The AI suggested increasingly complex `next.config.ts` Webpack configurations (like `serverComponentsExternalPackages` and `fallback: { fs: false }`), which did not solve the root issue. 
+
+I noticed the issue was fundamentally about where Next.js was trying to bundle the native dependency. I fixed it by explicitly moving the ingestion logic out of Server Actions and into standard Next.js API Routes (`app/api/documents/upload/route.ts`), where Next.js handles Node dependencies natively without aggressively bundling them for the client/edge context in the same way. Additionally, I dynamically imported `pdf-parse` within the function scope to completely hide it from the static analyzer during build time.
 
 ## Future Improvements
-With more time, I would:
-- Implement a true background worker queue (e.g., Upstash/Trigger.dev) for parsing massive PDFs asynchronously.
-- Persist the `useChat` messages to the database so that users can resume previous chat sessions, utilizing the `Conversation` and `Message` tables that are already designed in the Prisma schema.
-- Implement a hybrid search (BM25 Keyword + Vector) to improve retrieval recall for specific acronyms or ID numbers in the documents.
+- **Hybrid Search**: Implement keyword-based search alongside vector search to improve RAG accuracy for specific names or terms that embeddings might miss.
+- **Streaming UI**: Implement the AI SDK's `useChat` hook more robustly on the frontend to stream the assistant's tokens into the UI in real-time, improving perceived latency.
+- **Edge Functions**: Move the actual embedding and chunking pipeline into a background queue or Edge function so the user's upload request doesn't hang while waiting for the Gemini API to embed 100 chunks.
