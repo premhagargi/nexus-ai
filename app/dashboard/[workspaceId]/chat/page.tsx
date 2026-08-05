@@ -164,7 +164,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
             <Button
               type="submit"
               size="icon"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input?.trim()}
               className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end"
             >
               <Send className="h-4 w-4" />
