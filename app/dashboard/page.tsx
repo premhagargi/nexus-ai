@@ -1,34 +1,41 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
-export default async function DashboardIndex() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+export default async function DashboardIndexPage() {
+  const session = await getSession()
 
-  const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    include: { workspace: true }
+  if (!session?.userId) {
+    redirect('/login')
+  }
+
+  // Find the user's workspaces
+  const userWorkspaces = await prisma.workspace.findMany({
+    where: {
+      memberships: {
+        some: { userId: session.userId }
+      }
+    }
   })
 
-  if (memberships.length > 0) {
-    redirect(`/dashboard/${memberships[0].workspaceId}`)
-  } else {
-    // Create default workspace
-    const newWorkspace = await prisma.workspace.create({
-      data: {
-        name: 'Personal Workspace',
-        slug: 'personal-' + Date.now(),
-        ownerId: user.id,
-        memberships: {
-          create: {
-            userId: user.id,
-            role: 'OWNER'
-          }
+  if (userWorkspaces.length > 0) {
+    redirect(`/dashboard/${userWorkspaces[0].id}`)
+  }
+
+  // Handle case where user has no workspaces (create a default one)
+  const newWorkspace = await prisma.workspace.create({
+    data: {
+      name: 'Personal Workspace',
+      slug: `personal-${session.userId.substring(0, 8)}`,
+      ownerId: session.userId,
+      memberships: {
+        create: {
+          userId: session.userId,
+          role: 'OWNER'
         }
       }
-    })
-    redirect(`/dashboard/${newWorkspace.id}`)
-  }
+    }
+  })
+
+  redirect(`/dashboard/${newWorkspace.id}`)
 }

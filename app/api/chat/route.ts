@@ -3,7 +3,7 @@ import { google } from '@ai-sdk/google';
 import { streamText, tool, generateText } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { TaskType } from '@google/generative-ai';
 import { z } from 'zod';
@@ -14,12 +14,14 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, workspaceId, conversationId } = await req.json();
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getSession();
+
+    if (!session?.userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
 
     const membership = await prisma.membership.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: user.id } }
+      where: { workspaceId_userId: { workspaceId, userId: session.userId } }
     })
     if (!membership) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

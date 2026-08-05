@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { getSession } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai'
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
 import { TaskType } from '@google/generative-ai'
@@ -8,30 +9,47 @@ import mammoth from 'mammoth'
 
 export async function POST(req: NextRequest) {
   try {
-    const { workspaceId, filename, storagePath } = await req.json()
-    
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    const session = await getSession()
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const formData = await req.formData()
+    const file = formData.get('file') as File
+    const workspaceId = formData.get('workspaceId') as string
+
+    if (!file || !workspaceId) {
+      return NextResponse.json({ error: 'Missing file or workspaceId' }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+
+    // Upload to Supabase Storage
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${workspaceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(fileName, file)
+
+    if (uploadError) throw uploadError
+
     const { data: publicUrlData } = supabase.storage
       .from('documents')
-      .getPublicUrl(storagePath)
+      .getPublicUrl(uploadData.path)
 
     const document = await prisma.document.create({
       data: {
         workspaceId,
-        filename,
+        filename: file.name,
         storageUrl: publicUrlData.publicUrl,
-        uploadedBy: user.id,
+        uploadedBy: session.userId,
         status: 'PROCESSING'
       }
     })
 
-    // Process asynchronously to not block the response
-    processDocument(document.id, storagePath, workspaceId, filename).catch(console.error)
+    // Process async
+    processDocument(document.id, uploadData.path, workspaceId, file.name).catch(console.error)
 
     return NextResponse.json({ success: true, documentId: document.id })
   } catch (error: any) {
@@ -84,8 +102,6 @@ async function processDocument(documentId: string, storagePath: string, workspac
     
     for (const doc of docs) {
       const vector = await embeddings.embedQuery(doc.pageContent)
-      
-      // pgvector requires specific string representation for vectors: '[1,2,3]'
       const vectorStr = `[${vector.join(',')}]`
 
       await prisma.$executeRaw`

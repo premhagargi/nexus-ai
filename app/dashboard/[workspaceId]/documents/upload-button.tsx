@@ -8,13 +8,11 @@ import { Label } from '@/components/ui/label'
 import { Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -28,29 +26,16 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
         throw new Error('Please select a file')
       }
 
-      // Step 1: Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${workspaceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file)
+      formData.append('workspaceId', workspaceId)
 
-      if (uploadError) throw uploadError
-
-      // Step 2: Trigger backend processing via Next.js API route
-      const res = await fetch(`/api/documents/process`, {
+      const res = await fetch(`/api/documents/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workspaceId,
-          filename: file.name,
-          storagePath: uploadData.path,
-        })
+        body: formData
       })
 
       if (!res.ok) {
-        throw new Error('Failed to process document')
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to upload document')
       }
 
       toast.success('Document uploaded and processing started!')

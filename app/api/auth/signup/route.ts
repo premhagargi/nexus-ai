@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+import { setSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,30 +9,28 @@ export async function POST(req: NextRequest) {
     const email = body.email?.trim()
     const password = body.password
 
-    const supabase = await createClient()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
     })
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    if (existingUser) {
+      return NextResponse.json({ error: 'User already exists' }, { status: 400 })
     }
 
-    if (data.user) {
-      const userExists = await prisma.user.findUnique({
-        where: { id: data.user.id }
-      })
-      
-      if (!userExists) {
-        await prisma.user.create({
-          data: {
-            id: data.user.id,
-            email: data.user.email!,
-          }
-        })
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword
       }
-    }
+    })
+
+    await setSession(user.id)
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

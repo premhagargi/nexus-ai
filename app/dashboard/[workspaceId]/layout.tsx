@@ -1,6 +1,6 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { createClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
@@ -12,12 +12,11 @@ export default async function WorkspaceLayout({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await getSession()
+  if (!session?.userId) redirect('/login')
 
   const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
+    where: { userId: session.userId },
     include: { workspace: true }
   })
 
