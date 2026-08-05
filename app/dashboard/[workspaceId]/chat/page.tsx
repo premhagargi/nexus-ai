@@ -42,8 +42,8 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
         <div className="max-w-3xl mx-auto w-full px-4 pt-12 pb-40">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground mt-20">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 mb-6 shadow-lg shadow-indigo-500/5">
-                <Bot className="h-8 w-8 text-indigo-400" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-[1.25rem] mb-6 shadow-[0_8px_32px_rgba(99,102,241,0.2)] overflow-hidden bg-background">
+                <img src="/ai-magic-icon.webp" alt="AI Magic" className="h-full w-full object-cover" />
               </div>
               <h3 className="text-2xl font-semibold mb-2 text-foreground">How can I help you today?</h3>
               <p className="text-sm max-w-sm">
