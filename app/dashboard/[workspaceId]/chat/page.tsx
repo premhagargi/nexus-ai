@@ -409,26 +409,24 @@ function ChatInterface({
     isLoading && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user'
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* ── Header with Clear button ── */}
+    <div className="-mt-6 flex h-[calc(100%+1.5rem)] flex-col">
+      {/* ── Header with Clear button (aligned to far right) ── */}
       {allMessages.length > 0 && (
-        <div className="shrink-0 flex items-center justify-end px-4 sm:px-6 pt-3 pb-1">
-          <div className="mx-auto max-w-3xl w-full flex justify-end">
-            <button
-              id="clear-chat-btn"
-              onClick={handleClearChat}
-              disabled={clearing || isLoading}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-40"
-              aria-label="Clear chat history"
-            >
-              {clearing ? (
-                <Spinner className="h-3.5 w-3.5" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-              {clearing ? 'Clearing…' : 'Clear chat'}
-            </button>
-          </div>
+        <div className="shrink-0 flex items-center justify-end px-6 pt-2 pb-1">
+          <button
+            id="clear-chat-btn"
+            onClick={handleClearChat}
+            disabled={clearing || isLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-40"
+            aria-label="Clear chat history"
+          >
+            {clearing ? (
+              <Spinner className="h-3.5 w-3.5" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            {clearing ? 'Clearing…' : 'Clear chat'}
+          </button>
         </div>
       )}
 
