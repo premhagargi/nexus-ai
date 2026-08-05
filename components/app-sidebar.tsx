@@ -54,7 +54,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
   }
 
   return (
-    <Sidebar className="border-r border-border/50 bg-background/40 backdrop-blur-2xl shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
+    <Sidebar className="border-r border-border/50 bg-background/40 backdrop-blur-2xl shadow-sm">
       <SidebarHeader className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-3 px-2 pb-6 mb-2 border-b border-border/50">
           <div className="flex h-9 w-9 items-center justify-center">

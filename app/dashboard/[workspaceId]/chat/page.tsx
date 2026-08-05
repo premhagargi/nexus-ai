@@ -140,7 +140,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group">
+          <div className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group">
             <textarea
               value={input}
               onChange={handleInputChange}
@@ -157,11 +157,15 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               disabled={isLoading}
               rows={1}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end">
+            <Button onClick={(e) => {
+              if (!isLoading && input?.trim()) {
+                handleSubmit(e as any);
+              }
+            }} size="icon" disabled={isLoading || !input?.trim()} className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end">
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>
-          </form>
+          </div>
           <p className="text-center text-[11px] text-muted-foreground/60 mt-3 font-medium">
             Nexus AI can make mistakes. Consider verifying important information.
           </p>

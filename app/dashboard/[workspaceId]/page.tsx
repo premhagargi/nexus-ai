@@ -34,7 +34,7 @@ export default async function WorkspaceOverview({
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-indigo-200">Documents</CardTitle>
+            <CardTitle className="text-[13px] font-medium text-indigo-700">Documents</CardTitle>
             <Files className="h-4 w-4 text-indigo-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
@@ -47,7 +47,7 @@ export default async function WorkspaceOverview({
 
         <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-purple-200">Conversations</CardTitle>
+            <CardTitle className="text-[13px] font-medium text-purple-700">Conversations</CardTitle>
             <MessageSquare className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
@@ -60,7 +60,7 @@ export default async function WorkspaceOverview({
 
         <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-pink-200">Tasks</CardTitle>
+            <CardTitle className="text-[13px] font-medium text-pink-700">Tasks</CardTitle>
             <CheckSquare className="h-4 w-4 text-pink-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
