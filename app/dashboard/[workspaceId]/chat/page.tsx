@@ -3,7 +3,7 @@
 
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
-import { Send, Bot, User, Copy, Check, RefreshCw, Square } from 'lucide-react'
+import { Send, Bot, User, Copy, Check, RefreshCw, Square, Trash2 } from 'lucide-react'
 import { useEffect, useRef, use, useState, useCallback, useLayoutEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -286,17 +286,55 @@ function MessageRow({
   )
 }
 
-/* ═══════════════════════════════════════════
-   MAIN CHAT PAGE
-   ═══════════════════════════════════════════ */
+/* ─── History loading skeleton ─── */
 
-export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
-  const { workspaceId } = use(params)
+function ChatSkeleton() {
+  return (
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex-1 overflow-hidden px-4 py-6">
+        <div className="mx-auto max-w-3xl space-y-8">
+          {/* Simulated message skeletons */}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-4">
+              <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-20 rounded bg-muted animate-pulse" />
+                <div className="h-4 rounded bg-muted/70 animate-pulse" style={{ width: `${60 + i * 10}%` }} />
+                {i !== 2 && <div className="h-4 rounded bg-muted/50 animate-pulse" style={{ width: `${40 + i * 8}%` }} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="shrink-0 border-t border-border/50 bg-background">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-3">
+          <div className="h-12 rounded-2xl bg-muted/50 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════
+   INNER: ChatInterface (receives initialMessages)
+   ════════════════════════════════════════════ */
+
+function ChatInterface({
+  workspaceId,
+  initialMessages,
+  onHistoryCleared,
+}: {
+  workspaceId: string
+  initialMessages: any[]
+  onHistoryCleared: () => void
+}) {
   const [input, setInput] = useState('')
+  const [clearing, setClearing] = useState(false)
 
   const { messages, sendMessage, status, stop } = useChat({
     api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
     body: { workspaceId },
+    initialMessages,
   })
 
   const isLoading = status === 'streaming' || status === 'submitted'
@@ -347,11 +385,49 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
     }
   }, [sendMessage, workspaceId, isLoading])
 
+  const handleClearChat = async () => {
+    if (clearing || isLoading) return
+    setClearing(true)
+    try {
+      const res = await fetch(
+        `/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) throw new Error('Failed to clear chat')
+      toast.success('Chat history cleared')
+      // Re-mount the ChatInterface with empty history
+      onHistoryCleared()
+    } catch (err: any) {
+      console.error('[Chat UI] Clear chat error:', err)
+      toast.error(err?.message || 'Failed to clear chat')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   const showThinking =
     isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user'
 
   return (
     <div className="flex h-full flex-col bg-background">
+      {/* ── Header with Clear button ── */}
+      {messages.length > 0 && (
+        <div className="shrink-0 flex items-center justify-end px-4 sm:px-6 pt-3 pb-1">
+          <div className="mx-auto max-w-3xl w-full flex justify-end">
+            <button
+              id="clear-chat-btn"
+              onClick={handleClearChat}
+              disabled={clearing || isLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-40"
+              aria-label="Clear chat history"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {clearing ? 'Clearing…' : 'Clear chat'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Scrollable message area ── */}
       <div
         ref={scrollAreaRef}
@@ -468,5 +544,53 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
         </div>
       </div>
     </div>
+  )
+}
+
+/* ════════════════════════════════════════════
+   OUTER: ChatPage (loads history, shows skeleton)
+   ════════════════════════════════════════════ */
+
+export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
+  const { workspaceId } = use(params)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [initialMessages, setInitialMessages] = useState<any[]>([])
+  // Key forces ChatInterface to fully re-mount after clearing
+  const [chatKey, setChatKey] = useState(0)
+
+  const fetchHistory = useCallback(() => {
+    setHistoryLoaded(false)
+    fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.messages) setInitialMessages(data.messages)
+        else setInitialMessages([])
+      })
+      .catch((err) => {
+        console.error('[Chat UI] Failed to load history:', err)
+        setInitialMessages([])
+      })
+      .finally(() => setHistoryLoaded(true))
+  }, [workspaceId])
+
+  useEffect(() => {
+    fetchHistory()
+  }, [fetchHistory])
+
+  const handleHistoryCleared = useCallback(() => {
+    setInitialMessages([])
+    setChatKey((k) => k + 1)
+    setHistoryLoaded(true)
+  }, [])
+
+  if (!historyLoaded) return <ChatSkeleton />
+
+  return (
+    <ChatInterface
+      key={chatKey}
+      workspaceId={workspaceId}
+      initialMessages={initialMessages}
+      onHistoryCleared={handleHistoryCleared}
+    />
   )
 }

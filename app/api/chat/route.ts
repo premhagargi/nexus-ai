@@ -161,6 +161,33 @@ async function executeTool(
   return `Unknown tool: ${name}`
 }
 
+/* ─── Persist user + assistant turn to DB ─── */
+async function saveMessages(workspaceId: string, userText: string, assistantText: string) {
+  try {
+    let conversation = await prisma.conversation.findFirst({
+      where: { workspaceId },
+      orderBy: { updatedAt: 'desc' },
+    })
+    if (!conversation) {
+      conversation = await prisma.conversation.create({ data: { workspaceId } })
+    } else {
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { updatedAt: new Date() },
+      })
+    }
+    await prisma.message.createMany({
+      data: [
+        { conversationId: conversation.id, role: 'user', content: userText },
+        { conversationId: conversation.id, role: 'assistant', content: assistantText },
+      ],
+    })
+    console.log(`[Chat API] Saved user+assistant messages to conversation ${conversation.id}`)
+  } catch (e) {
+    console.error('[Chat API] Failed to save messages:', e)
+  }
+}
+
 /* ════════════════════════════════════════════
    POST /api/chat
    ════════════════════════════════════════════ */
@@ -379,6 +406,7 @@ ${context}`
 
               const followUpPartId = newPartId()
               let followUpStarted = false
+              let followUpText = ''
               for await (const chunk of followUpStream) {
                 const text = (chunk.choices?.[0]?.delta as any)?.content || ''
                 if (text) {
@@ -386,13 +414,19 @@ ${context}`
                     controller.enqueue(sseChunk({ type: 'text-start', id: followUpPartId }))
                     followUpStarted = true
                   }
+                  followUpText += text
                   controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
                 }
               }
               if (followUpStarted) {
                 controller.enqueue(sseChunk({ type: 'text-end', id: followUpPartId }))
               }
+              // Combine initial + follow-up text as the full assistant response
+              assistantText = [assistantText, followUpText].filter(Boolean).join('\n')
             }
+
+            // Persist the conversation turn to DB
+            await saveMessages(workspaceId, queryText, assistantText)
 
             controller.enqueue(sseDone())
             controller.close()
