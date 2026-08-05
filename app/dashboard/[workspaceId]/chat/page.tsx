@@ -27,6 +27,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -142,7 +143,8 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
           <form
-            onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }}
+            ref={formRef}
+            onSubmit={handleSubmit}
             className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group"
           >
             <textarea
@@ -150,9 +152,9 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
+                  e.preventDefault()
                   if (!isLoading && input?.trim()) {
-                    handleSubmit(e as any);
+                    formRef.current?.requestSubmit()
                   }
                 }
               }}
