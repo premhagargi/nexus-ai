@@ -499,8 +499,8 @@ function ChatInterface({
 
       {/* ── Fixed input panel ── */}
       <div className="shrink-0 border-t border-border/50 bg-background">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-3">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-muted/30 px-4 py-2 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/50 focus-within:shadow-md focus-within:shadow-indigo-500/5">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-2">
+          <div className="relative flex items-end gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/50 focus-within:shadow-md focus-within:shadow-indigo-500/5">
             <textarea
               ref={textareaRef}
               value={input}
@@ -542,7 +542,7 @@ function ChatInterface({
               </Button>
             )}
           </div>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground/50">
+          <p className="mt-1 text-center text-[10px] text-muted-foreground/40">
             Nexus AI can make mistakes. Verify important information.
           </p>
         </div>
