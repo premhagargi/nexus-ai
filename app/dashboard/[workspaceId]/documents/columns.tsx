@@ -16,45 +16,6 @@ import { Document } from "@prisma/client"
 import { Spinner } from "@/components/ui/spinner"
 import { useEffect, useState } from "react"
 
-const STAGES = [
-  { label: 'Parsing',  color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { label: 'Chunking', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { label: 'Indexing', color: 'bg-violet-50 text-violet-700 border-violet-200' },
-]
-
-function ProcessingStatus() {
-  const [stage, setStage] = useState(0)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStage(s => (s + 1) % STAGES.length)
-    }, 1200)
-    return () => clearInterval(interval)
-  }, [])
-
-  const current = STAGES[stage]
-
-  return (
-    <div className="flex items-center gap-2">
-      <Spinner className="h-3 w-3 shrink-0" />
-      <div className="flex items-center gap-1.5">
-        {STAGES.map((s, i) => (
-          <span
-            key={s.label}
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border transition-all duration-500 ${
-              i === stage
-                ? `${s.color} opacity-100 scale-100`
-                : 'bg-muted/50 text-muted-foreground/40 border-muted opacity-50 scale-95'
-            }`}
-          >
-            {s.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export const columns: ColumnDef<Document>[] = [
   {
     accessorKey: "filename",
@@ -84,18 +45,34 @@ export const columns: ColumnDef<Document>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status: string = row.getValue("status")
-      const isOptimistic = row.original.id.startsWith('optimistic-')
 
-      if (status === 'PROCESSING' || isOptimistic) {
-        return <ProcessingStatus />
+      if (status === 'PROCESSING') {
+        return (
+          <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/10 shadow-none font-medium text-[11px] uppercase tracking-wider flex items-center gap-1.5 w-fit">
+            <Spinner className="h-3 w-3 text-amber-500 animate-spin" />
+            Processing
+          </Badge>
+        )
       }
       if (status === 'COMPLETED') {
-        return <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 shadow-none font-medium text-[11px] uppercase tracking-wider">Processed</Badge>
+        return (
+          <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/10 shadow-none font-medium text-[11px] uppercase tracking-wider w-fit">
+            Processed
+          </Badge>
+        )
       }
       if (status === 'FAILED') {
-        return <Badge className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-50 shadow-none font-medium text-[11px] uppercase tracking-wider">Failed</Badge>
+        return (
+          <Badge className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/10 shadow-none font-medium text-[11px] uppercase tracking-wider w-fit">
+            Failed
+          </Badge>
+        )
       }
-      return <Badge variant="secondary" className="shadow-none font-medium text-[11px] uppercase tracking-wider">{status}</Badge>
+      return (
+        <Badge variant="secondary" className="shadow-none font-medium text-[11px] uppercase tracking-wider w-fit">
+          {status}
+        </Badge>
+      )
     }
   },
   {
@@ -108,7 +85,7 @@ export const columns: ColumnDef<Document>[] = [
         try {
           const d = new Date(val as string | Date)
           if (!isNaN(d.getTime())) {
-            dateStr = d.toLocaleDateString()
+            dateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
           }
         } catch (e) {}
       }

@@ -90,9 +90,19 @@ async function processDocument(documentId: string, storagePath: string, workspac
     
     let text = ''
     if (ext === 'pdf') {
-      const pdfParse = require('pdf-parse')
-      const parsed = await pdfParse(buffer)
-      text = parsed.text
+      try {
+        const pdfParse = require('pdf-parse')
+        const parseFn = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse.parse)
+        if (typeof parseFn === 'function') {
+          const parsed = await parseFn(buffer)
+          text = parsed.text || ''
+        } else {
+          text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+        }
+      } catch (pdfErr) {
+        console.warn('PDF parsing fallback applied:', pdfErr)
+        text = buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+      }
     } else if (ext === 'docx') {
       const result = await mammoth.extractRawText({ buffer })
       text = result.value
@@ -113,9 +123,11 @@ async function processDocument(documentId: string, storagePath: string, workspac
     const docs = await splitter.createDocuments([text], [{ source: filename }])
     
     // Embeddings
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const embeddings = new GoogleGenerativeAIEmbeddings({
       model: "text-embedding-004",
       taskType: TaskType.RETRIEVAL_DOCUMENT,
+      apiKey,
     })
     
     for (const doc of docs) {

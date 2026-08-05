@@ -29,9 +29,11 @@ export async function POST(req: NextRequest) {
     let context = '';
     
     if (lastMessage.role === 'user') {
+      const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
       const embeddings = new GoogleGenerativeAIEmbeddings({
         model: "text-embedding-004",
         taskType: TaskType.RETRIEVAL_DOCUMENT,
+        apiKey,
       })
       const vector = await embeddings.embedQuery(lastMessage.content)
       const vectorStr = `[${vector.join(',')}]`
@@ -62,7 +64,7 @@ ${context}
 `;
 
     const result = streamText({
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-1.5-flash'),
       messages,
       system: systemPrompt,
       tools: {
@@ -108,7 +110,7 @@ ${context}
             if (!docsText) return 'No documents found to summarize.'
             
             const summaryResult = await generateText({
-              model: google('gemini-2.5-flash'),
+              model: google('gemini-1.5-flash'),
               prompt: `Summarize the following workspace documents:\n\n${docsText}`
             })
             

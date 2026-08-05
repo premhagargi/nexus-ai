@@ -49,7 +49,7 @@ export default async function TasksPage({
                       {task.title}
                     </p>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(task.createdAt).toLocaleDateString()}
+                      {new Date(task.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                   {task.description && (
