@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Bot, User, Copy, RefreshCw } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { useEffect, useRef, use } from 'react'
+import { useEffect, useRef, use, useState } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'
 import { Bubble, BubbleContent } from '@/components/ui/bubble'
@@ -20,22 +20,25 @@ import { toast } from 'sonner'
 
 export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params)
-  const { messages, input, handleInputChange, handleSubmit, isLoading, reload, setMessages } = useChat({
+  const { messages, append, isLoading, reload } = useChat({
     api: '/api/chat',
     body: { workspaceId },
     onError: (error) => toast.error(error.message)
   })
 
+  const [localInput, setLocalInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
-
-  // DEBUG: trace input state
-  console.log('[Chat] input value:', JSON.stringify(input), '| type:', typeof input, '| isLoading:', isLoading)
-  console.log('[Chat] button disabled:', isLoading || !input?.trim())
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
+
+  const handleSend = async () => {
+    const content = localInput.trim()
+    if (!content || isLoading) return
+    setLocalInput('')
+    await append({ role: 'user', content })
+  }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -146,26 +149,14 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <form
-            ref={formRef}
-            onSubmit={handleSubmit}
-            className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group"
-          >
+          <div className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60">
             <textarea
-              value={input}
-              onChange={(e) => {
-                console.log('[Chat] onChange fired, value:', JSON.stringify(e.target.value))
-                handleInputChange(e)
-              }}
+              value={localInput}
+              onChange={(e) => setLocalInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  console.log('[Chat] Enter pressed, input:', JSON.stringify(input), '| requesting submit')
-                  if (!isLoading && input?.trim()) {
-                    formRef.current?.requestSubmit()
-                  } else {
-                    console.warn('[Chat] Enter blocked — isLoading:', isLoading, '| input empty:', !input?.trim())
-                  }
+                  handleSend()
                 }
               }}
               placeholder="Message Nexus AI..."
@@ -174,15 +165,15 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               rows={1}
             />
             <Button
-              type="submit"
+              onClick={handleSend}
               size="icon"
-              disabled={isLoading || !input?.trim()}
+              disabled={isLoading || !localInput.trim()}
               className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end"
             >
-              <Send className="h-4 w-4" />
+              {isLoading ? <Spinner className="h-4 w-4 text-inherit" /> : <Send className="h-4 w-4" />}
               <span className="sr-only">Send</span>
             </Button>
-          </form>
+          </div>
           <p className="text-center text-[11px] text-muted-foreground/60 mt-3 font-medium">
             Nexus AI can make mistakes. Consider verifying important information.
           </p>
