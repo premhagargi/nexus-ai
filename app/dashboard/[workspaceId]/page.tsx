@@ -16,56 +16,56 @@ export default async function WorkspaceOverview({
   ])
 
   return (
-    <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-500/10 to-purple-500/5 p-8 border border-white/5 shadow-2xl">
-        <div className="absolute top-0 right-0 p-12 opacity-20 pointer-events-none">
-          <div className="w-64 h-64 bg-indigo-500 rounded-full blur-[100px] animate-pulse"></div>
+    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 max-w-5xl">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-b from-indigo-500/10 to-purple-500/5 p-5 border border-white/5 shadow-xl">
+        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+          <div className="w-48 h-48 bg-indigo-500 rounded-full blur-[80px] animate-pulse"></div>
         </div>
-        <div className="relative z-10 space-y-2">
-          <h2 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+        <div className="relative z-10 space-y-1.5">
+          <h2 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
             Welcome to your AI Workspace
           </h2>
-          <p className="text-lg text-muted-foreground/80 max-w-2xl">
+          <p className="text-sm text-muted-foreground max-w-2xl">
             A centralized hub where your team's knowledge, conversations, and automated tasks converge seamlessly.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-lg group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-indigo-200">Documents</CardTitle>
-            <Files className="h-5 w-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-md group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
+            <CardTitle className="text-[13px] font-medium text-indigo-200">Documents</CardTitle>
+            <Files className="h-4 w-4 text-indigo-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold tracking-tighter text-white">{docCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="px-4 pb-4">
+            <div className="text-2xl font-bold tracking-tight text-white">{docCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Total uploaded documents
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-lg group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-200">Conversations</CardTitle>
-            <MessageSquare className="h-5 w-5 text-purple-400 group-hover:scale-110 transition-transform" />
+        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-md group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
+            <CardTitle className="text-[13px] font-medium text-purple-200">Conversations</CardTitle>
+            <MessageSquare className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold tracking-tighter text-white">{convCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="px-4 pb-4">
+            <div className="text-2xl font-bold tracking-tight text-white">{convCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Total AI chats
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-lg group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-pink-200">Tasks</CardTitle>
-            <CheckSquare className="h-5 w-5 text-pink-400 group-hover:scale-110 transition-transform" />
+        <Card className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors shadow-md group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
+            <CardTitle className="text-[13px] font-medium text-pink-200">Tasks</CardTitle>
+            <CheckSquare className="h-4 w-4 text-pink-400 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold tracking-tighter text-white">{taskCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="px-4 pb-4">
+            <div className="text-2xl font-bold tracking-tight text-white">{taskCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Generated by AI tools
             </p>
           </CardContent>
