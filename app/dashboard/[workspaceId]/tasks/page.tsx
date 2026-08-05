@@ -26,26 +26,26 @@ export default async function TasksPage({
 
       <div className="grid gap-4">
         {tasks.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
-            <CardTitle className="mb-2">No tasks yet</CardTitle>
+          <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-border">
+            <CardTitle className="mb-2 text-base">No tasks yet</CardTitle>
             <CardDescription>
               Ask the AI assistant to create a task for you using the &quot;save_task&quot; tool.
             </CardDescription>
           </Card>
         ) : (
           tasks.map(task => (
-            <Card key={task.id} className={task.completed ? 'opacity-70' : ''}>
+            <Card key={task.id} className={`border-border shadow-sm transition-opacity ${task.completed ? 'opacity-60' : ''}`}>
               <CardContent className="flex items-start gap-4 p-4">
                 <div className="mt-1">
                   {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   ) : (
                     <Circle className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <p className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                    <p className={`font-medium text-[15px] tracking-tight ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                       {task.title}
                     </p>
                     <span className="text-xs text-muted-foreground">

@@ -32,10 +32,10 @@ export default async function WorkspaceOverview({
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
+        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
             <CardTitle className="text-[13px] font-medium text-indigo-700">Documents</CardTitle>
-            <Files className="h-4 w-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+            <Files className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-semibold tracking-tighter text-foreground">{docCount}</div>
@@ -45,10 +45,10 @@ export default async function WorkspaceOverview({
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
+        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
             <CardTitle className="text-[13px] font-medium text-purple-700">Conversations</CardTitle>
-            <MessageSquare className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
+            <MessageSquare className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-semibold tracking-tighter text-foreground">{convCount}</div>
@@ -58,10 +58,10 @@ export default async function WorkspaceOverview({
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/50 border-border backdrop-blur-xl hover:bg-muted transition-colors shadow-md group">
+        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
             <CardTitle className="text-[13px] font-medium text-pink-700">Tasks</CardTitle>
-            <CheckSquare className="h-4 w-4 text-pink-400 group-hover:scale-110 transition-transform" />
+            <CheckSquare className="h-4 w-4 text-pink-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-semibold tracking-tighter text-foreground">{taskCount}</div>

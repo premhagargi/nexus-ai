@@ -44,13 +44,13 @@ export default async function ToolLogsPage({
                   <CardContent className="p-4 grid md:grid-cols-2 gap-4 text-xs font-mono">
                     <div className="space-y-2">
                       <div className="font-semibold text-muted-foreground">Arguments:</div>
-                      <pre className="bg-black/20 p-2 rounded-md overflow-x-auto border border-white/5">
+                      <pre className="bg-muted p-2 rounded-md overflow-x-auto border border-border text-xs">
                         {JSON.stringify(log.arguments, null, 2)}
                       </pre>
                     </div>
                     <div className="space-y-2">
                       <div className="font-semibold text-muted-foreground">Result:</div>
-                      <pre className="bg-black/20 p-2 rounded-md overflow-x-auto border border-white/5">
+                      <pre className="bg-muted p-2 rounded-md overflow-x-auto border border-border text-xs">
                         {JSON.stringify(log.result, null, 2)}
                       </pre>
                     </div>

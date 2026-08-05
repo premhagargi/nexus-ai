@@ -18,7 +18,12 @@ export default async function SettingsPage({
     }
   })
 
-  if (!workspace) return <div>Workspace not found</div>
+  if (!workspace) return (
+    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-2">
+      <p className="text-lg font-semibold text-foreground">Workspace not found</p>
+      <p className="text-sm">This workspace may have been deleted or you don&apos;t have access.</p>
+    </div>
+  )
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -45,7 +50,7 @@ export default async function SettingsPage({
             <Label htmlFor="slug">Workspace URL Slug</Label>
             <Input id="slug" defaultValue={workspace.slug} />
           </div>
-          <Button>Save Changes</Button>
+          <Button disabled className="cursor-default opacity-70">Save Changes</Button>
         </CardContent>
       </Card>
       

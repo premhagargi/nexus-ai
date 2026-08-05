@@ -30,10 +30,10 @@ export default async function WorkspaceLayout({
     <SidebarProvider>
       <AppSidebar workspaces={workspaces} currentWorkspaceId={workspaceId} />
       <main className="flex w-full flex-col overflow-hidden bg-background">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-6 lg:h-[60px]">
+        <header className="flex h-14 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-sm px-6 lg:h-[60px]">
           <SidebarTrigger />
           <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold">{currentWorkspace?.name}</h1>
+            <h1 className="text-[15px] font-semibold tracking-tight">{currentWorkspace?.name}</h1>
           </div>
         </header>
         <div className="flex-1 overflow-auto p-4 md:p-6 relative">

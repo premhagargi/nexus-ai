@@ -6,7 +6,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Bot, User, Copy, RefreshCw, Loader2 } from 'lucide-react'
+import { Send, Bot, User, Copy, RefreshCw } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { useEffect, useRef, use } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'
@@ -65,7 +66,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                         {m.role === 'user' ? (
                           <div className="whitespace-pre-wrap text-[15px]">{m.content}</div>
                         ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed">
+                          <div className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               components={{
