@@ -102,7 +102,17 @@ export const columns: ColumnDef<Document>[] = [
     accessorKey: "createdAt",
     header: "Uploaded",
     cell: ({ row }) => {
-      return <div className="text-muted-foreground font-medium text-[13px]">{new Date(row.getValue("createdAt")).toLocaleDateString()}</div>
+      const val = row.getValue("createdAt")
+      let dateStr = "Just now"
+      if (val) {
+        try {
+          const d = new Date(val as string | Date)
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString()
+          }
+        } catch (e) {}
+      }
+      return <div className="text-muted-foreground font-medium text-[13px]">{dateStr}</div>
     }
   },
   {

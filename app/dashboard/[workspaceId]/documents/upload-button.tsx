@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/attachment"
 
 import { Document } from '@prisma/client'
+import { Spinner } from '@/components/ui/spinner'
 
-export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspaceId: string, onUploadStart?: (doc: Document) => void }) {
+export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -30,29 +31,13 @@ export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspace
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const file = selectedFile
-    if (!file) return
+    if (!file || uploading) return
     
-    // Close immediately
-    setOpen(false)
-    setSelectedFile(null)
-
-    if (onUploadStart) {
-      onUploadStart({
-        id: 'optimistic-' + Date.now(),
-        filename: file.name,
-        status: 'PROCESSING',
-        createdAt: new Date(),
-        workspaceId,
-        storageUrl: '',
-        uploadedBy: ''
-      })
-    }
-
     setUploading(true)
-    
+
     try {
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      formData.append('file', file)
       formData.append('workspaceId', workspaceId)
 
       const res = await fetch(`/api/documents/upload`, {
@@ -67,6 +52,9 @@ export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspace
 
       toast.success('Document uploaded and processing started!')
       router.refresh()
+      setSelectedFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setOpen(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload document')
     } finally {
@@ -91,13 +79,23 @@ export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspace
 
   return (
     <Dialog open={open} onOpenChange={(val) => {
+      if (uploading) return
       setOpen(val)
       if (!val) setSelectedFile(null)
     }}>
       <DialogTrigger render={
-        <Button>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Document
+        <Button disabled={uploading}>
+          {uploading ? (
+            <>
+              <Spinner className="mr-2 h-4 w-4 inline animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Document
+            </>
+          )}
         </Button>
       } />
       <DialogContent>
@@ -147,7 +145,14 @@ export function UploadDocumentButton({ workspaceId, onUploadStart }: { workspace
             )}
           </div>
           <Button type="submit" disabled={uploading || !selectedFile} className="w-full">
-            {uploading ? 'Uploading...' : 'Upload & Process'}
+            {uploading ? (
+              <>
+                <Spinner className="mr-2 h-4 w-4 inline animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              'Upload & Process'
+            )}
           </Button>
         </form>
       </DialogContent>

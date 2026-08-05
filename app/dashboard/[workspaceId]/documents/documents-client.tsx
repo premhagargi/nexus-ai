@@ -1,16 +1,27 @@
 'use client'
 
-import { useOptimistic, startTransition } from 'react'
+import { useEffect } from 'react'
 import { Document } from '@prisma/client'
 import { DataTable } from './data-table'
 import { columns } from './columns'
 import { UploadDocumentButton } from './upload-button'
+import { useRouter } from 'next/navigation'
 
 export function DocumentsClient({ initialDocuments, workspaceId }: { initialDocuments: Document[], workspaceId: string }) {
-  const [optimisticDocs, addOptimisticDoc] = useOptimistic(
-    initialDocuments,
-    (state, newDoc: Document) => [newDoc, ...state]
-  )
+  const router = useRouter()
+
+  // Auto poll while any document is in PROCESSING state
+  const isProcessing = initialDocuments.some(d => d.status === 'PROCESSING')
+
+  useEffect(() => {
+    if (!isProcessing) return
+
+    const interval = setInterval(() => {
+      router.refresh()
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [isProcessing, router])
 
   return (
     <div className="flex flex-col w-full mt-6 space-y-8 px-4 md:px-8 pb-10">
@@ -21,14 +32,11 @@ export function DocumentsClient({ initialDocuments, workspaceId }: { initialDocu
             Manage your workspace knowledge base.
           </p>
         </div>
-        <UploadDocumentButton 
-          workspaceId={workspaceId} 
-          onUploadStart={(doc) => startTransition(() => addOptimisticDoc(doc))} 
-        />
+        <UploadDocumentButton workspaceId={workspaceId} />
       </div>
 
       <div className="w-full">
-        <DataTable columns={columns} data={optimisticDocs} />
+        <DataTable columns={columns} data={initialDocuments} />
       </div>
     </div>
   )

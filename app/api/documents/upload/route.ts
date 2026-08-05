@@ -24,15 +24,32 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Upload to Supabase Storage
+    // Ensure 'documents' bucket exists
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets()
+      if (!buckets?.some(b => b.name === 'documents')) {
+        await supabase.storage.createBucket('documents', { public: true })
+      }
+    } catch (e) {
+      console.warn('Bucket check warning:', e)
+    }
+
+    // Upload to Supabase Storage using Buffer
     const fileExt = file.name.split('.').pop()
     const fileName = `${workspaceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(fileName, file)
+      .upload(fileName, fileBuffer, {
+        contentType: file.type || 'application/octet-stream',
+        upsert: true
+      })
 
-    if (uploadError) throw uploadError
+    if (uploadError) {
+      console.error('[Supabase Storage Error]:', uploadError)
+      throw uploadError
+    }
 
     const { data: publicUrlData } = supabase.storage
       .from('documents')
@@ -53,7 +70,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, documentId: document.id })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Upload Route Error]:', error)
+    return NextResponse.json({ error: error.message || 'Failed to upload document' }, { status: 500 })
   }
 }
 
