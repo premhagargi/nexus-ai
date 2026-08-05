@@ -21,7 +21,7 @@ export const columns: ColumnDef<Document>[] = [
       return (
         <Button
           variant="ghost"
-          className="hover:bg-white/10 -ml-4"
+          className="hover:bg-white/10"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           File Name
