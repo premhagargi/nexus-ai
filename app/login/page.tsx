@@ -31,6 +31,7 @@ export default function LoginPage() {
       
       if (!res.ok) throw new Error(data.error || 'Login failed')
       
+      toast.success('Successfully logged in!')
       router.refresh()
       router.push('/dashboard')
     } catch (err: any) {

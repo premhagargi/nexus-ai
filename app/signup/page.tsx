@@ -31,6 +31,7 @@ export default function SignupPage() {
       
       if (!res.ok) throw new Error(data.error || 'Signup failed')
       
+      toast.success('Account created successfully!')
       router.refresh()
       router.push('/dashboard')
     } catch (err: any) {

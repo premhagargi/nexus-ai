@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 400 })
+      return NextResponse.json({ error: 'No account found with this email. Please sign up.' }, { status: 400 })
     }
 
     const isValid = await bcrypt.compare(password, user.password)
 
     if (!isValid) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 400 })
+      return NextResponse.json({ error: 'Incorrect password. Please try again.' }, { status: 400 })
     }
 
     await setSession(user.id)
