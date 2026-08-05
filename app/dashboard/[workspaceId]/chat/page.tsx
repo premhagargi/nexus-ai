@@ -33,7 +33,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   const { workspaceId } = use(params)
   const [input, setInput] = useState('')
   const { messages, sendMessage, status, regenerate } = useChat({
-    api: '/api/chat',
+    api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
     body: { workspaceId },
   })
 
@@ -49,7 +49,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
     if (!text || isLoading) return
     setInput('')
     try {
-      await sendMessage({ text })
+      await sendMessage({ text }, { body: { workspaceId } })
     } catch (err: any) {
       console.error('[Chat UI] sendMessage error:', err)
       toast.error(err?.message || 'Failed to send message')

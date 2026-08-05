@@ -22,7 +22,14 @@ function generateFallbackEmbedding(text: string, dimensions: number = 768): numb
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, workspaceId, conversationId } = await req.json();
+    const body = await req.json().catch(() => ({}))
+    const messages = body.messages || []
+    const urlWorkspaceId = req.nextUrl.searchParams.get('workspaceId')
+    const workspaceId = body.workspaceId || urlWorkspaceId
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
+    }
 
     const session = await getSession();
 
