@@ -26,18 +26,18 @@ export default async function DocumentsPage({
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col items-center max-w-3xl mx-auto mt-12 space-y-8 w-full">
+      <div className="text-center space-y-5">
         <div>
           <h2 className="text-3xl font-semibold tracking-tighter">Documents</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1.5">
             Manage your workspace knowledge base.
           </p>
         </div>
         <UploadDocumentButton workspaceId={workspaceId} />
       </div>
 
-      <div className="grid gap-4 max-w-4xl">
+      <div className="w-full">
         {documents.length === 0 ? (
           <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
             <CardTitle className="mb-2">No documents yet</CardTitle>
