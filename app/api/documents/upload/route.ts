@@ -181,23 +181,26 @@ async function processDocument(documentId: string, storagePath: string, workspac
         vectors = await embeddings.embedDocuments(batch)
       }
 
+      if (!vectors || !Array.isArray(vectors) || vectors.length !== batchDocs.length) {
+        throw new Error('Embedding model returned invalid or empty vector batch response')
+      }
+
       // Insert all chunks from this batch in a transaction
       await prisma.$transaction(
         vectors.map((vector, j) => {
+          if (!Array.isArray(vector) || vector.length === 0) {
+            throw new Error(`Embedding vector generation produced empty vector for chunk index ${j}`)
+          }
           const vectorStr = `[${vector.join(',')}]`
           const metaJson = JSON.stringify(batchDocs[j].metadata || {})
-          return prisma.$executeRaw`
-            INSERT INTO "DocumentChunk" (id, "workspaceId", "documentId", content, embedding, metadata, "createdAt")
-            VALUES (
-              gen_random_uuid(),
-              ${workspaceId},
-              ${documentId},
-              ${batchDocs[j].pageContent},
-              ${vectorStr}::vector,
-              ${metaJson}::jsonb,
-              NOW()
-            )
-          `
+          return prisma.$executeRawUnsafe(
+            `INSERT INTO "DocumentChunk" (id, "workspaceId", "documentId", content, embedding, metadata, "createdAt") VALUES (gen_random_uuid(), $1, $2, $3, $4::vector, $5::jsonb, NOW())`,
+            workspaceId,
+            documentId,
+            batchDocs[j].pageContent,
+            vectorStr,
+            metaJson
+          )
         })
       )
 

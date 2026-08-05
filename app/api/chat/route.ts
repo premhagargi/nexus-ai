@@ -29,27 +29,32 @@ export async function POST(req: NextRequest) {
     let context = '';
     
     if (lastMessage.role === 'user') {
-      const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-      const embeddings = new GoogleGenerativeAIEmbeddings({
-        model: "text-embedding-004",
-        taskType: TaskType.RETRIEVAL_DOCUMENT,
-        apiKey,
-      })
-      const vector = await embeddings.embedQuery(lastMessage.content)
-      const vectorStr = `[${vector.join(',')}]`
-
-      const chunks: any[] = await prisma.$queryRaw`
-        SELECT "documentId", content, metadata
-        FROM "DocumentChunk"
-        WHERE "workspaceId" = ${workspaceId}
-        ORDER BY embedding <-> ${vectorStr}::vector
-        LIMIT 5
-      `
-      if (chunks.length > 0) {
-        context = chunks.map((c, i) => {
-          const source = c.metadata?.source ? c.metadata.source : 'Unknown File'
-          return `Source: [${source}]\nContent:\n${c.content}`
-        }).join('\n\n---\n\n')
+      try {
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+        if (apiKey) {
+          const embeddings = new GoogleGenerativeAIEmbeddings({
+            model: "text-embedding-004",
+            taskType: TaskType.RETRIEVAL_DOCUMENT,
+            apiKey,
+          })
+          const vector = await embeddings.embedQuery(lastMessage.content)
+          if (vector && Array.isArray(vector) && vector.length > 0) {
+            const vectorStr = `[${vector.join(',')}]`
+            const chunks: any[] = await prisma.$queryRawUnsafe(
+              `SELECT "documentId", content, metadata FROM "DocumentChunk" WHERE "workspaceId" = $1 ORDER BY embedding <-> $2::vector LIMIT 5`,
+              workspaceId,
+              vectorStr
+            )
+            if (chunks && chunks.length > 0) {
+              context = chunks.map((c) => {
+                const source = c.metadata?.source ? c.metadata.source : 'Unknown File'
+                return `Source: [${source}]\nContent:\n${c.content}`
+              }).join('\n\n---\n\n')
+            }
+          }
+        }
+      } catch (embeddingError) {
+        console.warn('[Chat RAG] Retrieval warning, proceeding without document context:', embeddingError)
       }
     }
 

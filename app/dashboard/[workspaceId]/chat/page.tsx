@@ -20,25 +20,17 @@ import { toast } from 'sonner'
 
 export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params)
-  const { messages, append, isLoading, reload } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useChat({
     api: '/api/chat',
     body: { workspaceId },
-    onError: (error) => toast.error(error.message)
+    onError: (error) => toast.error(error?.message || 'Chat request failed')
   })
 
-  const [localInput, setLocalInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
-
-  const handleSend = async () => {
-    const content = localInput.trim()
-    if (!content || isLoading) return
-    setLocalInput('')
-    await append({ role: 'user', content })
-  }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -149,14 +141,23 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <div className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!input.trim() || isLoading) return
+              handleSubmit(e)
+            }}
+            className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60"
+          >
             <textarea
-              value={localInput}
-              onChange={(e) => setLocalInput(e.target.value)}
+              value={input}
+              onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  handleSend()
+                  if (input.trim() && !isLoading) {
+                    e.currentTarget.form?.requestSubmit()
+                  }
                 }
               }}
               placeholder="Message Nexus AI..."
@@ -165,15 +166,15 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               rows={1}
             />
             <Button
-              onClick={handleSend}
+              type="submit"
               size="icon"
-              disabled={isLoading || !localInput.trim()}
+              disabled={isLoading || !input.trim()}
               className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end"
             >
               {isLoading ? <Spinner className="h-4 w-4 text-inherit" /> : <Send className="h-4 w-4" />}
               <span className="sr-only">Send</span>
             </Button>
-          </div>
+          </form>
           <p className="text-center text-[11px] text-muted-foreground/60 mt-3 font-medium">
             Nexus AI can make mistakes. Consider verifying important information.
           </p>
