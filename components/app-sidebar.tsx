@@ -64,19 +64,17 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full justify-between px-4 py-7 bg-white/5 hover:bg-white/10 border-white/5 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group">
-              <div className="flex flex-col items-start text-left gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Workspace</span>
-                <span className="truncate font-semibold text-sm group-hover:text-indigo-300 transition-colors">{currentWorkspace?.name || 'Nexus AI'}</span>
-              </div>
-              <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </Button>
+          <DropdownMenuTrigger className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
+            <div className="flex flex-col items-start text-left gap-0.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Workspace</span>
+              <span className="truncate font-semibold text-sm group-hover:text-indigo-300 transition-colors">{currentWorkspace?.name || 'Nexus AI'}</span>
+            </div>
+            <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56 bg-background/95 backdrop-blur-xl border-white/10 rounded-xl" align="start">
             {optimisticWorkspaces.map(w => (
-              <DropdownMenuItem key={w.id} className="cursor-pointer hover:bg-white/10 transition-colors focus:bg-white/10 py-2.5 rounded-lg" asChild>
-                <Link href={`/dashboard/${w.id}`} className="w-full font-medium">
+              <DropdownMenuItem key={w.id} className="cursor-pointer hover:bg-white/10 transition-colors focus:bg-white/10 py-2.5 rounded-lg">
+                <Link href={`/dashboard/${w.id}`} className="w-full font-medium flex items-center">
                   {w.id.startsWith('temp-') ? <Loader2 className="h-3 w-3 animate-spin mr-2 inline" /> : null}
                   {w.name}
                 </Link>
@@ -133,7 +131,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === `/dashboard/${currentWorkspace?.id}`} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                <SidebarMenuButton isActive={pathname === `/dashboard/${currentWorkspace?.id}`} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
                   <Link href={`/dashboard/${currentWorkspace?.id}`}>
                     <LayoutDashboard className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Overview</span>
@@ -141,40 +139,40 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/chat`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
-                  <Link href={`/dashboard/${currentWorkspace?.id}/chat`}>
+                <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/chat`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                  <Link href={`/dashboard/${currentWorkspace?.id}/chat`} className="flex w-full items-center">
                     <MessageSquare className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">AI Chat</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/documents`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
-                  <Link href={`/dashboard/${currentWorkspace?.id}/documents`}>
+                <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/documents`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                  <Link href={`/dashboard/${currentWorkspace?.id}/documents`} className="flex w-full items-center">
                     <Files className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Knowledge Base</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/tasks`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
-                  <Link href={`/dashboard/${currentWorkspace?.id}/tasks`}>
+                <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/tasks`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                  <Link href={`/dashboard/${currentWorkspace?.id}/tasks`} className="flex w-full items-center">
                     <CheckSquare className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Tasks</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/logs`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
-                  <Link href={`/dashboard/${currentWorkspace?.id}/logs`}>
+                <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/logs`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                  <Link href={`/dashboard/${currentWorkspace?.id}/logs`} className="flex w-full items-center">
                     <Activity className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Tool Logs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/settings`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
-                  <Link href={`/dashboard/${currentWorkspace?.id}/settings`}>
+                <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/settings`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11">
+                  <Link href={`/dashboard/${currentWorkspace?.id}/settings`} className="flex w-full items-center">
                     <Settings className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Settings</span>
                   </Link>
