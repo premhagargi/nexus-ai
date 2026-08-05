@@ -5,7 +5,7 @@ import { Workspace } from '@prisma/client'
 import Link from 'next/link'
 import { LayoutDashboard, MessageSquare, Files, CheckSquare, Settings, Activity, ChevronsUpDown, LogOut, Sparkles } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuShortcut } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useState, useOptimistic, startTransition } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -64,27 +64,34 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
-            <div className="flex flex-col items-start text-left gap-0.5">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Workspace</span>
-              <span className="truncate font-semibold text-sm group-hover:text-indigo-300 transition-colors">{currentWorkspace?.name || 'Nexus AI'}</span>
-            </div>
-            <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-background/95 backdrop-blur-xl border-white/10 rounded-xl" align="start">
-            {optimisticWorkspaces.map(w => (
-              <DropdownMenuItem key={w.id} className="cursor-pointer hover:bg-white/10 transition-colors focus:bg-white/10 py-2.5 rounded-lg">
-                <Link href={`/dashboard/${w.id}`} className="w-full font-medium flex items-center">
+          <DropdownMenuTrigger render={
+            <Button variant="ghost" className="w-full flex items-center justify-between px-4 py-7 bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
+              <div className="flex flex-col items-start text-left gap-0.5">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Workspace</span>
+                <span className="truncate font-semibold text-sm group-hover:text-indigo-300 transition-colors">{currentWorkspace?.name || 'Nexus AI'}</span>
+              </div>
+              <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+            </Button>
+          } />
+          <DropdownMenuContent className="w-64 bg-background/95 backdrop-blur-xl border-white/10 rounded-xl" align="start">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Your Workspaces</DropdownMenuLabel>
+              {optimisticWorkspaces.map(w => (
+                <DropdownMenuItem key={w.id} onSelect={() => router.push(`/dashboard/${w.id}`)}>
                   {w.id.startsWith('temp-') ? <Loader2 className="h-3 w-3 animate-spin mr-2 inline" /> : null}
                   {w.name}
-                </Link>
+                  {w.id === currentWorkspace?.id && <DropdownMenuShortcut>✓</DropdownMenuShortcut>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDialogOpen(true) }}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Workspace
+                <DropdownMenuShortcut>⌘+N</DropdownMenuShortcut>
               </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator className="bg-white/10 my-1" />
-            <DropdownMenuItem className="cursor-pointer py-2.5 rounded-lg text-indigo-400 hover:text-indigo-300 focus:text-indigo-300" onSelect={(e) => { e.preventDefault(); setIsDialogOpen(true) }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Workspace
-            </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 
