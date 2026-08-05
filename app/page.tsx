@@ -115,7 +115,7 @@ function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; 
 
 function Tag({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-zinc-800 bg-zinc-900/80 text-zinc-400 backdrop-blur-sm">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-border bg-background/80 text-muted-foreground backdrop-blur-sm">
       {children}
     </span>
   )
@@ -123,7 +123,7 @@ function Tag({ children }: { children: ReactNode }) {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 mb-4">
+    <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-4">
       {children}
     </span>
   )
@@ -135,7 +135,7 @@ function DotGrid() {
       <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="dotgrid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="1" fill="currentColor" className="text-white" />
+            <circle cx="1" cy="1" r="1" fill="currentColor" className="text-foreground" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#dotgrid)" />
@@ -169,7 +169,7 @@ function Navbar() {
   return (
     <motion.nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50" : "bg-transparent"
+        scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border/50" : "bg-transparent"
       }`}
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -179,16 +179,16 @@ function Navbar() {
         <div className="flex items-center gap-8">
           <a href="#" className="flex items-center gap-2 group">
             <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
-              <Network className="w-3.5 h-3.5 text-zinc-950" />
+              <Network className="w-3.5 h-3.5 text-primary" />
             </div>
-            <span className="text-[15px] font-semibold text-zinc-100 tracking-tighter">nexus</span>
+            <span className="text-[15px] font-semibold text-foreground tracking-tighter">nexus</span>
           </a>
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="px-3 py-1.5 text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors rounded-md hover:bg-zinc-800/40"
+                className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
               >
                 {link.label}
               </a>
@@ -196,12 +196,12 @@ function Navbar() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <a href="/login" className="hidden sm:block text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors px-3 py-1.5">
+          <a href="/login" className="hidden sm:block text-[13px] text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5">
             Sign in
           </a>
           <a
             href="/signup"
-            className="text-[13px] font-medium text-zinc-950 bg-zinc-100 hover:bg-white px-4 py-1.5 rounded-lg transition-colors"
+            className="text-[13px] font-medium text-primary bg-primary/10 hover:bg-white px-4 py-1.5 rounded-lg transition-colors"
           >
             Get started
           </a>
@@ -235,20 +235,20 @@ function WorkspaceMockup() {
 
   return (
     <motion.div
-      className="relative w-full rounded-2xl border border-zinc-800/80 bg-zinc-950 shadow-2xl shadow-black/40 overflow-hidden"
+      className="relative w-full rounded-2xl border border-border/50 bg-background shadow-2xl shadow-primary/5 overflow-hidden"
       initial={{ opacity: 0, x: 40, rotateY: -2 }}
       animate={{ opacity: 1, x: 0, rotateY: 0 }}
       transition={{ duration: 1, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {/* Title bar */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/60 bg-zinc-900/50">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50 bg-background/80">
         <div className="flex gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
           <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
           <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
         </div>
         <div className="flex-1 flex justify-center">
-          <div className="text-[11px] text-zinc-600 bg-zinc-800/50 px-3 py-0.5 rounded-md">
+          <div className="text-[11px] text-muted-foreground bg-muted/50 px-3 py-0.5 rounded-md">
             nexus — Acme Corp workspace
           </div>
         </div>
@@ -257,7 +257,7 @@ function WorkspaceMockup() {
 
       <div className="flex h-[340px] sm:h-[380px]">
         {/* Sidebar */}
-        <div className="hidden sm:flex w-48 flex-col border-r border-zinc-800/60 bg-zinc-900/30 p-3">
+        <div className="hidden sm:flex w-48 flex-col border-r border-border/50 bg-background/80 p-3">
           <div className="flex items-center gap-2 mb-4 px-2">
             <div className="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <span className="text-[9px] font-semibold text-emerald-400">A</span>
@@ -271,8 +271,8 @@ function WorkspaceMockup() {
                 key={item.label}
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] ${
                   item.active
-                    ? "bg-zinc-800/80 text-zinc-200"
-                    : "text-zinc-500 hover:text-zinc-400"
+                    ? "bg-muted/50 text-foreground"
+                    : "text-muted-foreground hover:text-muted-foreground"
                 }`}
               >
                 {item.icon}
@@ -281,8 +281,8 @@ function WorkspaceMockup() {
             ))}
           </div>
 
-          <div className="mt-auto pt-4 border-t border-zinc-800/40">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2">Tasks</div>
+          <div className="mt-auto pt-4 border-t border-border/50">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 mb-2">Tasks</div>
             <div className="space-y-1.5">
               {tasks.map((task) => (
                 <div key={task.label} className="flex items-start gap-2 px-2">
@@ -291,7 +291,7 @@ function WorkspaceMockup() {
                   }`}>
                     {task.done && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                   </div>
-                  <span className={`text-[11px] leading-tight ${task.done ? "text-zinc-600 line-through" : "text-zinc-400"}`}>
+                  <span className={`text-[11px] leading-tight ${task.done ? "text-muted-foreground line-through" : "text-muted-foreground"}`}>
                     {task.label}
                   </span>
                 </div>
@@ -303,7 +303,7 @@ function WorkspaceMockup() {
         {/* Main content */}
         <div className="flex-1 flex flex-col p-4 overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-4 h-4 text-zinc-500" />
+            <FileText className="w-4 h-4 text-muted-foreground" />
             <span className="text-[13px] font-medium text-zinc-300">Q3 Earnings Analysis</span>
             <Tag>RAG</Tag>
           </div>
@@ -312,8 +312,8 @@ function WorkspaceMockup() {
           <div className="flex-1 space-y-4 overflow-hidden">
             {/* User message */}
             <div className="flex justify-end">
-              <div className="bg-zinc-800 rounded-xl rounded-tr-sm px-3.5 py-2.5 max-w-[80%]">
-                <p className="text-[12px] text-zinc-200 leading-relaxed">
+              <div className="bg-muted rounded-xl rounded-tr-sm px-3.5 py-2.5 max-w-[80%]">
+                <p className="text-[12px] text-foreground leading-relaxed">
                   What were the key takeaways from our Q3 earnings report?
                 </p>
               </div>
@@ -321,11 +321,11 @@ function WorkspaceMockup() {
 
             {/* AI response */}
             <div className="flex gap-2.5">
-              <div className="w-6 h-6 rounded-lg bg-zinc-800 border border-zinc-700/60 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Sparkles className="w-3 h-3 text-zinc-400" />
+              <div className="w-6 h-6 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Sparkles className="w-3 h-3 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="bg-zinc-900/80 border border-zinc-800/60 rounded-xl rounded-tl-sm px-3.5 py-2.5">
+                <div className="bg-background/80 border border-border/50 rounded-xl rounded-tl-sm px-3.5 py-2.5">
                   <p className="text-[12px] text-zinc-300 leading-relaxed">
                     {aiResponse}
                     <motion.span
@@ -337,13 +337,13 @@ function WorkspaceMockup() {
                 </div>
                 {/* Sources */}
                 <div className="flex gap-2 mt-2">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-800/40 border border-zinc-800/60">
-                    <FileText className="w-2.5 h-2.5 text-zinc-500" />
-                    <span className="text-[10px] text-zinc-500">Q3-report.pdf</span>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
+                    <FileText className="w-2.5 h-2.5 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Q3-report.pdf</span>
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-800/40 border border-zinc-800/60">
-                    <FileText className="w-2.5 h-2.5 text-zinc-500" />
-                    <span className="text-[10px] text-zinc-500">apac-growth.csv</span>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
+                    <FileText className="w-2.5 h-2.5 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">apac-growth.csv</span>
                   </div>
                 </div>
               </div>
@@ -351,12 +351,12 @@ function WorkspaceMockup() {
           </div>
 
           {/* Input */}
-          <div className="mt-3 flex items-center gap-2 bg-zinc-900/60 border border-zinc-800/60 rounded-xl px-3.5 py-2.5">
-            <Search className="w-3.5 h-3.5 text-zinc-600" />
-            <span className="text-[12px] text-zinc-600">Ask about your documents...</span>
-            <div className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800/60">
-              <Command className="w-2.5 h-2.5 text-zinc-600" />
-              <span className="text-[10px] text-zinc-600">K</span>
+          <div className="mt-3 flex items-center gap-2 bg-background/80 border border-border/50 rounded-xl px-3.5 py-2.5">
+            <Search className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[12px] text-muted-foreground">Ask about your documents...</span>
+            <div className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/50">
+              <Command className="w-2.5 h-2.5 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">K</span>
             </div>
           </div>
         </div>
@@ -404,7 +404,7 @@ function Hero() {
             </motion.div>
 
             <motion.h1
-              className="mt-6 text-[clamp(2.5rem,5.5vw,4.5rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-zinc-100"
+              className="mt-6 text-[clamp(2.5rem,5.5vw,4.5rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -413,11 +413,11 @@ function Hero() {
               <br />
               that thinks
               <br />
-              <span className="text-zinc-500">with your team.</span>
+              <span className="text-muted-foreground">with your team.</span>
             </motion.h1>
 
             <motion.p
-              className="mt-6 text-[17px] leading-relaxed text-zinc-500 max-w-md"
+              className="mt-6 text-[17px] leading-relaxed text-muted-foreground max-w-md"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.35 }}
@@ -434,14 +434,14 @@ function Hero() {
             >
               <a
                 href="/signup"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-100 text-zinc-950 text-[14px] font-medium hover:bg-white transition-colors group"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/10 text-primary text-[14px] font-medium hover:bg-white transition-colors group"
               >
                 Start building
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </a>
               <a
                 href="#"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-800 text-zinc-400 text-[14px] font-medium hover:border-zinc-700 hover:text-zinc-300 transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border text-muted-foreground text-[14px] font-medium hover:border-zinc-700 hover:text-zinc-300 transition-colors"
               >
                 Read the docs
               </a>
@@ -454,18 +454,18 @@ function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.65 }}
             >
-              <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-xl px-4 py-3 font-mono text-[12px] leading-relaxed max-w-md">
-                <div className="text-zinc-600 mb-1">{"// One call. Full context."}</div>
+              <div className="bg-background/80 border border-border/50 rounded-xl px-4 py-3 font-mono text-[12px] leading-relaxed max-w-md">
+                <div className="text-muted-foreground mb-1">{"// One call. Full context."}</div>
                 <div>
-                  <span className="text-zinc-500">const</span>{" "}
+                  <span className="text-muted-foreground">const</span>{" "}
                   <span className="text-zinc-300">answer</span>{" "}
-                  <span className="text-zinc-600">=</span>{" "}
-                  <span className="text-zinc-500">await</span>{" "}
+                  <span className="text-muted-foreground">=</span>{" "}
+                  <span className="text-muted-foreground">await</span>{" "}
                   <span className="text-emerald-400/80">nexus</span>
-                  <span className="text-zinc-500">.query</span>
-                  <span className="text-zinc-600">(</span>
+                  <span className="text-muted-foreground">.query</span>
+                  <span className="text-muted-foreground">(</span>
                   <span className="text-amber-300/70">{'"What drove Q3 growth?"'}</span>
-                  <span className="text-zinc-600">)</span>
+                  <span className="text-muted-foreground">)</span>
                 </div>
               </div>
             </motion.div>
@@ -476,7 +476,7 @@ function Hero() {
             <WorkspaceMockup />
             {/* Floating notification */}
             <motion.div
-              className="absolute -top-3 -right-2 sm:right-4 bg-zinc-900 border border-zinc-800/80 rounded-xl px-3 py-2 shadow-xl shadow-black/30"
+              className="absolute -top-3 -right-2 sm:right-4 bg-card border border-border/50 rounded-xl px-3 py-2 shadow-xl shadow-primary/5"
               initial={{ opacity: 0, scale: 0.9, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 1.5 }}
@@ -487,7 +487,7 @@ function Hero() {
                 </div>
                 <div>
                   <div className="text-[11px] font-medium text-zinc-300">3 documents indexed</div>
-                  <div className="text-[10px] text-zinc-600">Ready to query</div>
+                  <div className="text-[10px] text-muted-foreground">Ready to query</div>
                 </div>
               </div>
             </motion.div>
@@ -509,13 +509,13 @@ function Problem() {
             <SectionLabel>The problem</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
               Your team&apos;s knowledge is trapped
-              <span className="text-zinc-600"> in forty different tabs.</span>
+              <span className="text-muted-foreground"> in forty different tabs.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.2}>
-            <p className="mt-6 text-[17px] leading-relaxed text-zinc-500 max-w-xl">
+            <p className="mt-6 text-[17px] leading-relaxed text-muted-foreground max-w-xl">
               Documents in one tool. Chat in another. Tasks in a third. Search that finds filenames, never answers.
               Your team re-explains the same context every day — to each other and to their tools.
             </p>
@@ -532,10 +532,10 @@ function Problem() {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:border-zinc-700/60 transition-colors"
+                className="bg-background/80 border border-border/50 rounded-2xl p-5 hover:border-border transition-colors"
               >
-                <div className="text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-zinc-100 tracking-tighter">{stat.n}</div>
-                <div className="mt-1 text-[13px] text-zinc-500 leading-snug">{stat.label}</div>
+                <div className="text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-foreground tracking-tighter">{stat.n}</div>
+                <div className="mt-1 text-[13px] text-muted-foreground leading-snug">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -565,14 +565,14 @@ function Workflow() {
               <SectionLabel>How it works</SectionLabel>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
                 From raw documents
                 <br />
-                <span className="text-zinc-500">to grounded answers.</span>
+                <span className="text-muted-foreground">to grounded answers.</span>
               </h2>
             </Reveal>
             <Reveal delay={0.15}>
-              <p className="mt-4 text-[15px] text-zinc-500 leading-relaxed max-w-sm">
+              <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
                 Four steps. No configuration wizards, no prompt engineering, no data pipelines to maintain.
               </p>
             </Reveal>
@@ -585,8 +585,8 @@ function Workflow() {
                   key={step.label}
                   className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 ${
                     active === i
-                      ? "bg-zinc-900/80 border-zinc-700/60"
-                      : "bg-transparent border-zinc-800/30 hover:border-zinc-800/60"
+                      ? "bg-background/80 border-border"
+                      : "bg-transparent border-border/50 hover:border-border/50"
                   }`}
                   onClick={() => setActive(i)}
                   whileHover={{ x: 4 }}
@@ -595,15 +595,15 @@ function Workflow() {
                   <div className="flex items-start gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
                       active === i
-                        ? "bg-zinc-100 text-zinc-950"
-                        : "bg-zinc-800/50 text-zinc-500"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted/50 text-muted-foreground"
                     }`}>
                       {step.icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <span className={`text-[15px] font-semibold transition-colors ${
-                          active === i ? "text-zinc-100" : "text-zinc-500"
+                          active === i ? "text-foreground" : "text-muted-foreground"
                         }`}>
                           {step.label}
                         </span>
@@ -620,7 +620,7 @@ function Workflow() {
                       <AnimatePresence mode="wait">
                         {active === i && (
                           <motion.p
-                            className="mt-1.5 text-[13px] text-zinc-400 leading-relaxed"
+                            className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed"
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
@@ -662,9 +662,9 @@ function RAGFlow() {
             <SectionLabel>Under the hood</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
               Retrieval-augmented generation,
-              <span className="text-zinc-500"> without the plumbing.</span>
+              <span className="text-muted-foreground"> without the plumbing.</span>
             </h2>
           </Reveal>
         </div>
@@ -678,14 +678,14 @@ function RAGFlow() {
               {stages.map((stage, i) => (
                 <Reveal key={stage.label} delay={0.1 + i * 0.07}>
                   <motion.div
-                    className="relative bg-zinc-900/60 border border-zinc-800/60 rounded-2xl p-4 text-center hover:border-zinc-700/60 transition-all group"
+                    className="relative bg-background/80 border border-border/50 rounded-2xl p-4 text-center hover:border-border transition-all group"
                     whileHover={{ y: -4, transition: { type: "spring", stiffness: 400, damping: 25 } }}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800/60 border border-zinc-700/30 flex items-center justify-center mx-auto text-zinc-400 group-hover:text-zinc-200 group-hover:bg-zinc-800 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border flex items-center justify-center mx-auto text-muted-foreground group-hover:text-foreground group-hover:bg-muted transition-colors">
                       {stage.icon}
                     </div>
-                    <div className="mt-3 text-[13px] font-semibold text-zinc-200">{stage.label}</div>
-                    <div className="mt-0.5 text-[11px] text-zinc-600">{stage.sub}</div>
+                    <div className="mt-3 text-[13px] font-semibold text-foreground">{stage.label}</div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">{stage.sub}</div>
                   </motion.div>
                 </Reveal>
               ))}
@@ -696,43 +696,43 @@ function RAGFlow() {
         {/* Code example */}
         <Reveal delay={0.4}>
           <div className="mt-16 max-w-2xl mx-auto">
-            <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/60">
-                <Terminal className="w-3.5 h-3.5 text-zinc-600" />
-                <span className="text-[11px] text-zinc-600 font-mono">query.ts</span>
+            <div className="bg-background/80 border border-border/50 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
+                <Terminal className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground font-mono">query.ts</span>
               </div>
               <div className="p-4 font-mono text-[12px] leading-relaxed">
                 <div>
-                  <span className="text-zinc-500">const</span>{" "}
+                  <span className="text-muted-foreground">const</span>{" "}
                   <span className="text-zinc-300">response</span>{" "}
-                  <span className="text-zinc-600">=</span>{" "}
-                  <span className="text-zinc-500">await</span>{" "}
+                  <span className="text-muted-foreground">=</span>{" "}
+                  <span className="text-muted-foreground">await</span>{" "}
                   <span className="text-emerald-400/80">nexus</span>
-                  <span className="text-zinc-500">.query</span>
-                  <span className="text-zinc-600">{"({"}</span>
+                  <span className="text-muted-foreground">.query</span>
+                  <span className="text-muted-foreground">{"({"}</span>
                 </div>
                 <div className="pl-4">
-                  <span className="text-zinc-400">workspace</span>
-                  <span className="text-zinc-600">:</span>{" "}
+                  <span className="text-muted-foreground">workspace</span>
+                  <span className="text-muted-foreground">:</span>{" "}
                   <span className="text-amber-300/70">{'"acme-corp"'}</span>
-                  <span className="text-zinc-600">,</span>
+                  <span className="text-muted-foreground">,</span>
                 </div>
                 <div className="pl-4">
-                  <span className="text-zinc-400">question</span>
-                  <span className="text-zinc-600">:</span>{" "}
+                  <span className="text-muted-foreground">question</span>
+                  <span className="text-muted-foreground">:</span>{" "}
                   <span className="text-amber-300/70">{'"Summarize Q3 revenue by region"'}</span>
-                  <span className="text-zinc-600">,</span>
+                  <span className="text-muted-foreground">,</span>
                 </div>
                 <div className="pl-4">
-                  <span className="text-zinc-400">citations</span>
-                  <span className="text-zinc-600">:</span>{" "}
+                  <span className="text-muted-foreground">citations</span>
+                  <span className="text-muted-foreground">:</span>{" "}
                   <span className="text-purple-400/70">true</span>
-                  <span className="text-zinc-600">,</span>
+                  <span className="text-muted-foreground">,</span>
                 </div>
                 <div>
-                  <span className="text-zinc-600">{"})"}</span>
+                  <span className="text-muted-foreground">{"})"}</span>
                 </div>
-                <div className="mt-2 text-zinc-600">{"// → { answer, sources: [...], confidence: 0.94 }"}</div>
+                <div className="mt-2 text-muted-foreground">{"// → { answer, sources: [...], confidence: 0.94 }"}</div>
               </div>
             </div>
           </div>
@@ -753,9 +753,9 @@ function Features() {
           <SectionLabel>Capabilities</SectionLabel>
         </Reveal>
         <Reveal delay={0.1}>
-          <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100 max-w-lg">
+          <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground max-w-lg">
             Everything you need.
-            <span className="text-zinc-500"> Nothing you don&apos;t.</span>
+            <span className="text-muted-foreground"> Nothing you don&apos;t.</span>
           </h2>
         </Reveal>
 
@@ -763,24 +763,24 @@ function Features() {
           {FEATURES.map((feature, i) => (
             <Reveal key={feature.title} delay={0.1 + i * 0.08}>
               <motion.div
-                className="group grid md:grid-cols-[1fr,auto] items-center gap-8 p-6 md:p-8 rounded-2xl border border-zinc-800/40 hover:border-zinc-700/60 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all"
+                className="group grid md:grid-cols-[1fr,auto] items-center gap-8 p-6 md:p-8 rounded-2xl border border-border/50 hover:border-border bg-background/80 hover:bg-background/80 transition-all"
                 whileHover={{ x: 6 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               >
                 <div className="flex items-start gap-5">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-800/60 border border-zinc-700/30 flex items-center justify-center flex-shrink-0 text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border flex items-center justify-center flex-shrink-0 text-muted-foreground group-hover:text-foreground transition-colors">
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="text-[17px] font-semibold text-zinc-100">{feature.title}</h3>
-                    <p className="mt-1.5 text-[14px] text-zinc-500 leading-relaxed max-w-md">
+                    <h3 className="text-[17px] font-semibold text-foreground">{feature.title}</h3>
+                    <p className="mt-1.5 text-[14px] text-muted-foreground leading-relaxed max-w-md">
                       {feature.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="hidden md:block">
-                  <div className="bg-zinc-950 border border-zinc-800/60 rounded-xl px-4 py-2.5 font-mono text-[11px] text-zinc-500 group-hover:text-zinc-400 transition-colors whitespace-nowrap">
+                  <div className="bg-background border border-border/50 rounded-xl px-4 py-2.5 font-mono text-[11px] text-muted-foreground group-hover:text-muted-foreground transition-colors whitespace-nowrap">
                     {feature.detail}
                   </div>
                 </div>
@@ -815,20 +815,20 @@ function Architecture() {
             <SectionLabel>Architecture</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
               Built for production.
-              <span className="text-zinc-500"> Not a prototype.</span>
+              <span className="text-muted-foreground"> Not a prototype.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.15}>
-            <p className="mt-4 text-[15px] text-zinc-500 leading-relaxed">
+            <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed">
               Multi-tenant, horizontally scalable, and deployed at the edge. Every query is authenticated, encrypted, and audited.
             </p>
           </Reveal>
         </div>
 
         <Reveal delay={0.2}>
-          <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-6 md:p-10 overflow-x-auto">
+          <div className="bg-background/80 border border-border/50 rounded-2xl p-6 md:p-10 overflow-x-auto">
             <div className="grid grid-cols-5 gap-x-3 gap-y-3 min-w-[600px]">
               {Array.from({ length: 15 }, (_, idx) => {
                 const col = idx % 5
@@ -840,13 +840,13 @@ function Architecture() {
                 return (
                   <motion.div
                     key={node.label}
-                    className="bg-zinc-950 border border-zinc-800/60 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-zinc-600/60 transition-all group"
+                    className="bg-background border border-border/50 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary/20 transition-all group"
                     whileHover={{ y: -3, transition: { type: "spring", stiffness: 400, damping: 25 } }}
                   >
-                    <div className="w-9 h-9 rounded-lg bg-zinc-800/60 border border-zinc-700/30 flex items-center justify-center text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
                       {node.icon}
                     </div>
-                    <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors text-center">
+                    <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center">
                       {node.label}
                     </span>
                   </motion.div>
@@ -855,10 +855,10 @@ function Architecture() {
             </div>
 
             {/* Flow arrows */}
-            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-zinc-800/40">
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border/50">
               {["Request", "Authenticate", "Retrieve", "Generate", "Respond"].map((step, i, arr) => (
                 <div key={step} className="flex items-center gap-2">
-                  <span className="text-[11px] text-zinc-600 font-mono">{step}</span>
+                  <span className="text-[11px] text-muted-foreground font-mono">{step}</span>
                   {i < arr.length - 1 && <ChevronRight className="w-3 h-3 text-zinc-700" />}
                 </div>
               ))}
@@ -892,14 +892,14 @@ function Security() {
               <SectionLabel>Enterprise</SectionLabel>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
                 Security is not
                 <br />
-                <span className="text-zinc-500">an afterthought.</span>
+                <span className="text-muted-foreground">an afterthought.</span>
               </h2>
             </Reveal>
             <Reveal delay={0.15}>
-              <p className="mt-4 text-[15px] text-zinc-500 leading-relaxed max-w-sm">
+              <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
                 Built for teams that handle sensitive data. Every layer is designed with defense in depth, from authentication to storage.
               </p>
             </Reveal>
@@ -907,7 +907,7 @@ function Security() {
               <div className="mt-6 flex items-center gap-2">
                 <a
                   href="#"
-                  className="inline-flex items-center gap-2 text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors group"
+                  className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors group"
                 >
                   Security whitepaper
                   <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -919,12 +919,12 @@ function Security() {
           <div className="grid sm:grid-cols-2 gap-3">
             {items.map((item, i) => (
               <Reveal key={item.title} delay={0.1 + i * 0.06}>
-                <div className="group p-5 rounded-2xl border border-zinc-800/40 hover:border-zinc-700/50 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all h-full">
-                  <div className="w-9 h-9 rounded-xl bg-zinc-800/50 border border-zinc-700/30 flex items-center justify-center text-zinc-400 group-hover:text-zinc-200 transition-colors mb-3">
+                <div className="group p-5 rounded-2xl border border-border/50 hover:border-border bg-background/80 hover:bg-background/80 transition-all h-full">
+                  <div className="w-9 h-9 rounded-xl bg-muted/50 border border-border flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors mb-3">
                     {item.icon}
                   </div>
-                  <h3 className="text-[14px] font-semibold text-zinc-200">{item.title}</h3>
-                  <p className="mt-1 text-[13px] text-zinc-500 leading-relaxed">{item.description}</p>
+                  <h3 className="text-[14px] font-semibold text-foreground">{item.title}</h3>
+                  <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">{item.description}</p>
                 </div>
               </Reveal>
             ))}
@@ -942,28 +942,28 @@ function FinalCTA() {
     <section className="relative py-32 lg:py-40">
       <div className="max-w-7xl mx-auto px-6">
         <Reveal>
-          <div className="relative bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-10 md:p-16 overflow-hidden">
+          <div className="relative bg-background/80 border border-border/50 rounded-3xl p-10 md:p-16 overflow-hidden">
             <DotGrid />
             <div className="relative z-10 max-w-lg">
-              <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-[-0.03em] text-foreground">
                 Stop searching.
                 <br />
                 Start knowing.
               </h2>
-              <p className="mt-4 text-[16px] text-zinc-500 leading-relaxed">
+              <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
                 Set up your workspace in under two minutes. No credit card, no sales call. Just your documents and your questions.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
                   href="/signup"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zinc-100 text-zinc-950 text-[14px] font-medium hover:bg-white transition-colors group"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary/10 text-primary text-[14px] font-medium hover:bg-white transition-colors group"
                 >
                   Get started free
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </a>
                 <a
                   href="#"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-zinc-700 text-zinc-400 text-[14px] font-medium hover:border-zinc-600 hover:text-zinc-300 transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-zinc-700 text-muted-foreground text-[14px] font-medium hover:border-zinc-600 hover:text-zinc-300 transition-colors"
                 >
                   Talk to us
                 </a>
@@ -986,28 +986,28 @@ function Footer() {
   ]
 
   return (
-    <footer className="border-t border-zinc-800/50">
+    <footer className="border-t border-border/50">
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
-                <Network className="w-3.5 h-3.5 text-zinc-950" />
+                <Network className="w-3.5 h-3.5 text-primary" />
               </div>
-              <span className="text-[15px] font-semibold text-zinc-100 tracking-tighter">nexus</span>
+              <span className="text-[15px] font-semibold text-foreground tracking-tighter">nexus</span>
             </div>
-            <p className="text-[13px] text-zinc-600 leading-relaxed max-w-[200px]">
+            <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[200px]">
               The AI workspace for teams that take their knowledge seriously.
             </p>
           </div>
 
           {columns.map((col) => (
             <div key={col.title}>
-              <div className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider mb-4">{col.title}</div>
+              <div className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">{col.title}</div>
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link}>
-                    <a href="#" className="text-[13px] text-zinc-600 hover:text-zinc-300 transition-colors">{link}</a>
+                    <a href="#" className="text-[13px] text-muted-foreground hover:text-zinc-300 transition-colors">{link}</a>
                   </li>
                 ))}
               </ul>
@@ -1015,12 +1015,12 @@ function Footer() {
           ))}
         </div>
 
-        <div className="mt-16 pt-6 border-t border-zinc-800/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-16 pt-6 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-[12px] text-zinc-700">© 2026 Nexus AI, Inc.</span>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-zinc-400 transition-colors">Privacy</a>
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-zinc-400 transition-colors">Terms</a>
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-zinc-400 transition-colors">DPA</a>
+            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">Privacy</a>
+            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">Terms</a>
+            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">DPA</a>
           </div>
         </div>
       </div>
@@ -1032,7 +1032,7 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <main className="bg-zinc-950 text-zinc-100 antialiased selection:bg-zinc-700/30 overflow-x-hidden">
+    <main className="bg-background text-foreground antialiased selection:bg-zinc-700/30 overflow-x-hidden">
       <NoiseOverlay />
       <Navbar />
       <Hero />

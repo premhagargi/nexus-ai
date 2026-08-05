@@ -54,18 +54,18 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
   }
 
   return (
-    <Sidebar className="border-r border-white/5 bg-background/40 backdrop-blur-2xl shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
+    <Sidebar className="border-r border-border/50 bg-background/40 backdrop-blur-2xl shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
       <SidebarHeader className="pt-6 pb-4 px-4">
-        <div className="flex items-center gap-3 px-2 pb-6 mb-2 border-b border-white/5">
+        <div className="flex items-center gap-3 px-2 pb-6 mb-2 border-b border-border/50">
           <div className="flex h-9 w-9 items-center justify-center">
             <img src="/ai-magic-icon.webp" alt="Nexus AI" className="h-full w-full object-contain" />
           </div>
-          <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Nexus AI</span>
+          <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Nexus AI</span>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger render={
-            <Button variant="ghost" className="w-full flex items-center justify-between px-4 py-7 bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
+            <Button variant="ghost" className="w-full flex items-center justify-between px-4 py-7 bg-muted/50 hover:bg-muted border border-border/50 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
               <div className="flex flex-col items-start text-left gap-0.5">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Workspace</span>
                 <span className="truncate font-semibold text-sm group-hover:text-indigo-300 transition-colors">{currentWorkspace?.name || 'Nexus AI'}</span>
@@ -73,7 +73,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
               <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
             </Button>
           } />
-          <DropdownMenuContent className="w-64 bg-background/95 backdrop-blur-xl border-white/10 rounded-xl" align="start">
+          <DropdownMenuContent className="w-64 bg-background/95 backdrop-blur-xl border-border rounded-xl" align="start">
             <DropdownMenuGroup>
               <DropdownMenuLabel>Your Workspaces</DropdownMenuLabel>
               {optimisticWorkspaces.map(w => (
@@ -84,7 +84,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSeparator className="bg-muted" />
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDialogOpen(true) }}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -96,7 +96,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
         </DropdownMenu>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-background/95 backdrop-blur-2xl border-white/10 text-foreground shadow-2xl">
+          <DialogContent className="sm:max-w-[425px] bg-background/95 backdrop-blur-2xl border-border text-foreground shadow-2xl">
             <form onSubmit={handleCreateWorkspace}>
               <DialogHeader>
                 <DialogTitle className="text-xl">Create Workspace</DialogTitle>
@@ -113,14 +113,14 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                     id="name"
                     value={newWorkspaceName}
                     onChange={(e) => setNewWorkspaceName(e.target.value)}
-                    className="bg-white/5 border-white/10 focus-visible:ring-indigo-500"
+                    className="bg-muted/50 border-border focus-visible:ring-indigo-500"
                     placeholder="e.g. Engineering Docs"
                     autoComplete="off"
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="hover:bg-white/5">
+                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="hover:bg-muted/50">
                   Cancel
                 </Button>
                 <Button type="submit" disabled={!newWorkspaceName.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
@@ -177,7 +177,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-white/5">
+      <SidebarFooter className="p-4 border-t border-border/50">
         <SidebarMenu>
           <SidebarMenuItem>
             <form action="/auth/signout" method="post">

@@ -60,7 +60,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                     </Avatar>
                   </MessageAvatar>
                   <MessageContent>
-                    <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white/5 border border-white/5 shadow-sm'}>
+                    <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-muted/50 border border-border/50 shadow-sm'}>
                       <BubbleContent>
                         {m.role === 'user' ? (
                           <div className="whitespace-pre-wrap text-[15px]">{m.content}</div>
@@ -77,7 +77,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                                       style={vscDarkPlus}
                                       language={match[1]}
                                       PreTag="div"
-                                      className="rounded-xl my-4 overflow-hidden border border-white/10"
+                                      className="rounded-xl my-4 overflow-hidden border border-border"
                                     >
                                       {String(children).replace(/\n$/, '')}
                                     </SyntaxHighlighter>
@@ -120,7 +120,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                     </Avatar>
                   </MessageAvatar>
                   <MessageContent>
-                    <Bubble variant="muted" className="bg-white/5 border border-white/5">
+                    <Bubble variant="muted" className="bg-muted/50 border border-border/50">
                       <BubbleContent className="flex items-center gap-3 py-3">
                         <div className="flex gap-1">
                           <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -140,7 +140,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group">
+          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group">
             <textarea
               value={input}
               onChange={handleInputChange}
@@ -157,7 +157,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               disabled={isLoading}
               rows={1}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-9 w-9 rounded-[14px] bg-white text-black hover:bg-zinc-200 shrink-0 transition-colors disabled:opacity-50 disabled:bg-white/10 disabled:text-white/40 mb-0.5 self-end">
+            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end">
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>

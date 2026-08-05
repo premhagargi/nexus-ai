@@ -21,7 +21,7 @@ export const columns: ColumnDef<Document>[] = [
       return (
         <Button
           variant="ghost"
-          className="hover:bg-white/10"
+          className="hover:bg-muted"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           File Name
@@ -59,7 +59,7 @@ export const columns: ColumnDef<Document>[] = [
         text = "Processing"
       }
       
-      return <Badge variant={variant} className="bg-white/10 hover:bg-white/15 text-white shadow-none font-medium text-[11px] uppercase tracking-wider">{text}</Badge>
+      return <Badge variant={variant} className="bg-muted hover:bg-muted text-foreground shadow-none font-medium text-[11px] uppercase tracking-wider">{text}</Badge>
     }
   },
   {
@@ -77,17 +77,17 @@ export const columns: ColumnDef<Document>[] = [
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger render={
-              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-white/10">
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             } />
-            <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-xl border-white/10 rounded-xl">
+            <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-xl border-border rounded-xl">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(doc.id)} className="cursor-pointer hover:bg-white/10 focus:bg-white/10">
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(doc.id)} className="cursor-pointer hover:bg-muted focus:bg-muted">
                 Copy ID
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuSeparator className="bg-muted" />
               <DropdownMenuItem className="text-red-400 focus:text-red-300 cursor-pointer hover:bg-red-500/10 focus:bg-red-500/10">Delete document</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

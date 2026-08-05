@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:50px_50px]" />
       <div className="absolute h-full w-full bg-background [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
       
-      <Card className="w-full max-w-sm relative z-10 border-white/10 bg-black/40 backdrop-blur-xl">
+      <Card className="w-full max-w-sm relative z-10 border-border bg-background/80 backdrop-blur-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-semibold tracking-tighter">Login to Nexus AI</CardTitle>
           <CardDescription>
@@ -57,11 +57,11 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="m@example.com" required className="bg-black/20" />
+              <Input id="email" name="email" type="email" placeholder="m@example.com" required className="bg-muted" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required className="bg-black/20" />
+              <Input id="password" name="password" type="password" required className="bg-muted" />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">

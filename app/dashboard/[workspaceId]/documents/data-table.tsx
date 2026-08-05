@@ -46,11 +46,11 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+      <div className="overflow-hidden rounded-2xl border border-border bg-muted/50 backdrop-blur-xl shadow-2xl">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-white/10 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id} className="text-muted-foreground/70 font-semibold text-[11px] uppercase tracking-wider">
@@ -72,7 +72,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="border-white/10 hover:bg-white/5 transition-colors group"
+                  className="border-border hover:bg-muted/50 transition-colors group"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -97,7 +97,7 @@ export function DataTable<TData, TValue>({
           size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          className="border-white/10 bg-transparent hover:bg-white/10 disabled:opacity-30"
+          className="border-border bg-transparent hover:bg-muted disabled:opacity-30"
         >
           Previous
         </Button>
@@ -106,7 +106,7 @@ export function DataTable<TData, TValue>({
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          className="border-white/10 bg-transparent hover:bg-white/10 disabled:opacity-30"
+          className="border-border bg-transparent hover:bg-muted disabled:opacity-30"
         >
           Next
         </Button>
