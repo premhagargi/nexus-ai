@@ -150,18 +150,19 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              if (!input.trim() || isLoading) return
+              const cleanInput = (input || '').trim()
+              if (!cleanInput || isLoading) return
               handleSubmit(e)
             }}
             className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60"
           >
             <textarea
-              value={input}
+              value={input || ''}
               onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  if (input.trim() && !isLoading) {
+                  if ((input || '').trim() && !isLoading) {
                     e.currentTarget.form?.requestSubmit()
                   }
                 }
@@ -174,7 +175,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
             <Button
               type="submit"
               size="icon"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !(input || '').trim()}
               className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end"
             >
               {isLoading ? <Spinner className="h-4 w-4 text-inherit" /> : <Send className="h-4 w-4" />}

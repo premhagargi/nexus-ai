@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool, generateText } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -35,13 +34,15 @@ export async function POST(req: NextRequest) {
     })
     if (!membership) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
+    const google = createGoogleGenerativeAI({ apiKey });
+
     const lastMessage = messages[messages.length - 1];
     let context = '';
     
-    if (lastMessage.role === 'user') {
+    if (lastMessage && lastMessage.role === 'user') {
       try {
         let vector: number[] = []
-        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
         if (apiKey) {
           try {
             const embeddings = new GoogleGenerativeAIEmbeddings({
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
           }
         }
         if (!vector || !Array.isArray(vector) || vector.length === 0) {
-          vector = generateFallbackEmbedding(lastMessage.content, 768)
+          vector = generateFallbackEmbedding(lastMessage.content || '', 768)
         }
         
         const vectorStr = `[${vector.join(',')}]`
