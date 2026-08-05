@@ -140,7 +140,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.3)] rounded-[24px] p-2 transition-all focus-within:ring-1 focus-within:ring-white/20 focus-within:bg-zinc-900/80 group">
+          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60 group">
             <textarea
               value={input}
               onChange={handleInputChange}
@@ -153,11 +153,11 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                 }
               }}
               placeholder="Message Nexus AI..."
-              className="flex-1 bg-transparent border-0 focus-visible:ring-0 shadow-none text-[15px] px-4 py-3 min-h-[52px] max-h-48 resize-none placeholder:text-muted-foreground/70 outline-none w-full"
+              className="flex-1 bg-transparent border-0 focus-visible:ring-0 shadow-none text-[15px] px-3 py-2.5 min-h-[44px] max-h-48 resize-none placeholder:text-muted-foreground/60 outline-none w-full"
               disabled={isLoading}
               rows={1}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-10 w-10 rounded-[16px] bg-white text-black hover:bg-zinc-200 shrink-0 transition-colors disabled:opacity-50 disabled:bg-white/10 disabled:text-white/40">
+            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-9 w-9 rounded-[14px] bg-white text-black hover:bg-zinc-200 shrink-0 transition-colors disabled:opacity-50 disabled:bg-white/10 disabled:text-white/40 mb-0.5 self-end">
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>
