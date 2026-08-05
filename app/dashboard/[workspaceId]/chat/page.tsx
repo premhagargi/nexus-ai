@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Bot, User, Copy, RefreshCw, Loader2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, use } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'
 import { Bubble, BubbleContent } from '@/components/ui/bubble'
@@ -17,10 +17,11 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { toast } from 'sonner'
 
-export default function ChatPage({ params }: { params: { workspaceId: string } }) {
+export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
+  const { workspaceId } = use(params)
   const { messages, input, handleInputChange, handleSubmit, isLoading, reload, setMessages } = useChat({
     api: '/api/chat',
-    body: { workspaceId: params.workspaceId },
+    body: { workspaceId },
     onError: (error) => toast.error(error.message)
   })
 
@@ -144,7 +145,7 @@ export default function ChatPage({ params }: { params: { workspaceId: string } }
               className="flex-1 bg-muted/50 border-border/50 focus-visible:ring-1"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>
