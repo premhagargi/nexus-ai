@@ -498,8 +498,8 @@ function ChatInterface({
       </div>
 
       {/* ── Fixed input panel ── */}
-      <div className="shrink-0 border-t border-border/50 bg-background">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-2">
+      <div className="shrink-0 border-t border-border/50 bg-background -mb-6 -mx-6 px-6 pt-2 pb-2">
+        <div className="mx-auto max-w-3xl">
           <div className="relative flex items-end gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/50 focus-within:shadow-md focus-within:shadow-indigo-500/5">
             <textarea
               ref={textareaRef}
