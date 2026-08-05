@@ -64,7 +64,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   return (
     <div className="relative flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-3xl mx-auto w-full px-4 pt-12 pb-40">
+        <div className="max-w-3xl mx-auto w-full px-4 pt-8 pb-8">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground mt-20">
               <div className="flex h-20 w-20 items-center justify-center mb-6">
@@ -166,9 +166,10 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
         </div>
       </div>
       
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
-        <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-          <div className="relative flex w-full items-center bg-background/40 backdrop-blur-2xl border border-border shadow-[0_0_30px_rgba(0,0,0,0.1)] rounded-[20px] p-1.5 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30 focus-within:bg-background/60">
+      {/* Fixed Message Input Panel */}
+      <div className="sticky bottom-0 left-0 w-full shrink-0 bg-background/80 backdrop-blur-2xl border-t border-border/40 pt-4 pb-5 px-4 z-20">
+        <div className="max-w-3xl mx-auto w-full">
+          <div className="relative flex w-full items-center bg-background/60 backdrop-blur-2xl border border-border/80 shadow-[0_4px_24px_rgba(0,0,0,0.12)] rounded-[20px] p-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500/50 focus-within:bg-background/80">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -194,7 +195,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
               <span className="sr-only">Send</span>
             </Button>
           </div>
-          <p className="text-center text-[11px] text-muted-foreground/60 mt-3 font-medium">
+          <p className="text-center text-[11px] text-muted-foreground/60 mt-2 font-medium">
             Nexus AI can make mistakes. Consider verifying important information.
           </p>
         </div>
