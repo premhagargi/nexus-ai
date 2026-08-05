@@ -90,73 +90,87 @@ ${context}
     console.log('[Chat Route] workspaceId:', workspaceId)
     console.log('[Chat Route] context length:', context.length)
 
-    const result = streamText({
-      model: google('gemini-1.5-flash') as any,
-      messages,
-      system: systemPrompt,
-      tools: {
-        save_task: tool({
-          description: 'Creates a task inside the current workspace.',
-          parameters: z.object({
-            title: z.string().describe('The title of the task'),
-            description: z.string().optional().describe('The description of the task'),
+    try {
+      const result = streamText({
+        model: google('gemini-1.5-flash') as any,
+        messages,
+        system: systemPrompt,
+        tools: {
+          save_task: tool({
+            description: 'Creates a task inside the current workspace.',
+            parameters: z.object({
+              title: z.string().describe('The title of the task'),
+              description: z.string().optional().describe('The description of the task'),
+            }),
+            execute: async ({ title, description }) => {
+              console.log(`[AI Tool Execution] Calling 'save_task' with args:`, { title, description });
+              const task = await prisma.task.create({
+                data: {
+                  workspaceId,
+                  title,
+                  description,
+                }
+              })
+              
+              await prisma.toolExecution.create({
+                data: {
+                  workspaceId,
+                  toolName: 'save_task',
+                  arguments: { title, description },
+                  result: { taskId: task.id, status: 'success' }
+                }
+              })
+              
+              return `Task "${title}" created successfully.`;
+            },
           }),
-          execute: async ({ title, description }) => {
-            console.log(`[AI Tool Execution] Calling 'save_task' with args:`, { title, description });
-            const task = await prisma.task.create({
-              data: {
-                workspaceId,
-                title,
-                description,
-              }
-            })
-            
-            await prisma.toolExecution.create({
-              data: {
-                workspaceId,
-                toolName: 'save_task',
-                arguments: { title, description },
-                result: { taskId: task.id, status: 'success' }
-              }
-            })
-            
-            return `Task "${title}" created successfully.`;
-          },
-        }),
-        summarize_workspace: tool({
-          description: 'Reads uploaded documents and generates an AI summary of the workspace.',
-          parameters: z.object({}),
-          execute: async () => {
-            console.log(`[AI Tool Execution] Calling 'summarize_workspace'`);
-            const docs = await prisma.documentChunk.findMany({
-              where: { workspaceId },
-              take: 20
-            })
-            
-            const docsText = docs.map(d => d.content).join('\n\n')
-            if (!docsText) return 'No documents found to summarize.'
-            
-            const summaryResult = await generateText({
-              model: google('gemini-1.5-flash') as any,
-              prompt: `Summarize the following workspace documents:\n\n${docsText}`
-            })
-            
-            await prisma.toolExecution.create({
-              data: {
-                workspaceId,
-                toolName: 'summarize_workspace',
-                arguments: {},
-                result: { summary: summaryResult.text, status: 'success' }
-              }
-            })
+          summarize_workspace: tool({
+            description: 'Reads uploaded documents and generates an AI summary of the workspace.',
+            parameters: z.object({}),
+            execute: async () => {
+              console.log(`[AI Tool Execution] Calling 'summarize_workspace'`);
+              const docs = await prisma.documentChunk.findMany({
+                where: { workspaceId },
+                take: 20
+              })
+              
+              const docsText = docs.map(d => d.content).join('\n\n')
+              if (!docsText) return 'No documents found to summarize.'
+              
+              const summaryResult = await generateText({
+                model: google('gemini-1.5-flash') as any,
+                prompt: `Summarize the following workspace documents:\n\n${docsText}`
+              })
+              
+              await prisma.toolExecution.create({
+                data: {
+                  workspaceId,
+                  toolName: 'summarize_workspace',
+                  arguments: {},
+                  result: { summary: summaryResult.text, status: 'success' }
+                }
+              })
 
-            return `Workspace summarized successfully. Summary:\n${summaryResult.text}`;
-          }
-        })
-      }
-    });
+              return `Workspace summarized successfully. Summary:\n${summaryResult.text}`;
+            }
+          })
+        }
+      });
 
-    return result.toDataStreamResponse();
+      return result.toDataStreamResponse();
+    } catch (apiError: any) {
+      console.warn('[Chat Route] Model API call exception, returning fallback response:', apiError)
+      const fallbackText = context
+        ? `Here is the information retrieved from your workspace documents:\n\n${context}`
+        : `Nexus AI is ready! Note: Please make sure a valid Google AI Studio API key (starting with 'AIzaSy') is set in GOOGLE_GENERATIVE_AI_API_KEY to enable live Gemini AI generation.`
+
+      return new Response(`0:${JSON.stringify(fallbackText)}\n`, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'x-vercel-ai-ui-stream': 'v1'
+        }
+      })
+    }
   } catch (e: any) {
     console.error('Chat API Error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
