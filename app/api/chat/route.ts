@@ -72,12 +72,12 @@ const CEREBRAS_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'save_task',
-      description: 'Creates a task inside the current workspace.',
+      description: 'Creates a task in the current workspace. IMPORTANT: You must infer the user\'s true intent and write a clean, grammatically correct task title. Fix any typos, autocorrect misspellings (e.g. "mw" → "me", "teh" → "the"), and rephrase into a clear action item. Never use the user\'s raw typo-ridden text verbatim as the title.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'The title of the task' },
-          description: { type: 'string', description: 'A short description of the task (optional)' },
+          title: { type: 'string', description: 'A clean, corrected, human-readable task title inferred from the user\'s intent. Fix all typos and spelling mistakes.' },
+          description: { type: 'string', description: 'A short optional description with more context about the task.' },
         },
         required: ['title'],
       },
