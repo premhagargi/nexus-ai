@@ -68,6 +68,9 @@ Context from workspace documents:
 ${context}
 `;
 
+    console.log('[Chat Route] workspaceId:', workspaceId)
+    console.log('[Chat Route] context length:', context.length)
+
     const result = streamText({
       model: google('gemini-1.5-flash'),
       messages,

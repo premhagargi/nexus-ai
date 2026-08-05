@@ -23,7 +23,13 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useChat({
     api: '/api/chat',
     body: { workspaceId },
-    onError: (error) => toast.error(error?.message || 'Chat request failed')
+    onResponse: (response) => {
+      console.log('[Chat UI] Got response status:', response.status)
+    },
+    onError: (error) => {
+      console.error('[Chat UI] Chat error:', error)
+      toast.error(error?.message || 'Chat request failed')
+    }
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
