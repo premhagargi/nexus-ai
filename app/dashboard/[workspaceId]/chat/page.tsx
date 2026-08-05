@@ -37,121 +37,127 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4">
-      <Card className="flex flex-1 flex-col overflow-hidden border-none shadow-none bg-transparent">
-        <CardHeader className="px-0 pt-0">
-          <CardTitle>AI Assistant</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-0">
-          <ScrollArea className="h-full p-4">
-            {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground p-8">
-                <Bot className="h-12 w-12 mb-4 opacity-20" />
-                <h3 className="text-lg font-semibold mb-2">How can I help you today?</h3>
-                <p className="text-sm max-w-sm">
-                  Ask me questions about your workspace documents or instruct me to use tools like creating tasks.
-                </p>
+    <div className="relative flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-3xl mx-auto w-full px-4 pt-12 pb-40">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground mt-20">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 mb-6 shadow-lg shadow-indigo-500/5">
+                <Bot className="h-8 w-8 text-indigo-400" />
               </div>
-            ) : (
-              <div className="flex flex-col gap-6 pb-4">
-                {messages.map((m) => (
-                  <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'}>
-                    <MessageAvatar>
-                      <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-primary/10'}`}>
-                        <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</AvatarFallback>
-                      </Avatar>
-                    </MessageAvatar>
-                    <MessageContent>
-                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'}>
-                        <BubbleContent>
-                          {m.role === 'user' ? (
-                            <div className="whitespace-pre-wrap text-sm">{m.content}</div>
-                          ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  code({ node, inline, className, children, ...props }: any) {
-                                    const match = /language-(\w+)/.exec(className || '')
-                                    return !inline && match ? (
-                                      <SyntaxHighlighter
-                                        {...props}
-                                        style={vscDarkPlus}
-                                        language={match[1]}
-                                        PreTag="div"
-                                        className="rounded-md my-2"
-                                      >
-                                        {String(children).replace(/\n$/, '')}
-                                      </SyntaxHighlighter>
-                                    ) : (
-                                      <code {...props} className={`${className} bg-primary/20 px-1 py-0.5 rounded text-xs`}>
-                                        {children}
-                                      </code>
-                                    )
-                                  }
-                                }}
-                              >
-                                {m.content}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                        </BubbleContent>
-                      </Bubble>
-                      
-                      <MessageFooter>
-                        <div className="flex items-center gap-2 opacity-0 group-hover/message:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(m.content)}>
-                            <Copy className="h-3 w-3" />
+              <h3 className="text-2xl font-semibold mb-2 text-foreground">How can I help you today?</h3>
+              <p className="text-sm max-w-sm">
+                Ask me questions about your workspace documents or instruct me to use tools like creating tasks.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {messages.map((m) => (
+                <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'} className="max-w-full">
+                  <MessageAvatar>
+                    <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
+                      <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-indigo-400" />}</AvatarFallback>
+                    </Avatar>
+                  </MessageAvatar>
+                  <MessageContent>
+                    <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white/5 border border-white/5 shadow-sm'}>
+                      <BubbleContent>
+                        {m.role === 'user' ? (
+                          <div className="whitespace-pre-wrap text-[15px]">{m.content}</div>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                code({ node, inline, className, children, ...props }: any) {
+                                  const match = /language-(\w+)/.exec(className || '')
+                                  return !inline && match ? (
+                                    <SyntaxHighlighter
+                                      {...props}
+                                      style={vscDarkPlus}
+                                      language={match[1]}
+                                      PreTag="div"
+                                      className="rounded-xl my-4 overflow-hidden border border-white/10"
+                                    >
+                                      {String(children).replace(/\n$/, '')}
+                                    </SyntaxHighlighter>
+                                  ) : (
+                                    <code {...props} className={`${className} bg-primary/20 px-1.5 py-0.5 rounded-md text-[13px] font-mono`}>
+                                      {children}
+                                    </code>
+                                  )
+                                }
+                              }}
+                            >
+                              {m.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                      </BubbleContent>
+                    </Bubble>
+                    
+                    <MessageFooter>
+                      <div className="flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => copyToClipboard(m.content)}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => reload()}>
+                            <RefreshCw className="h-3.5 w-3.5" />
                           </Button>
-                          {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => reload()}>
-                              <RefreshCw className="h-3 w-3" />
-                            </Button>
-                          )}
+                        )}
+                      </div>
+                    </MessageFooter>
+                  </MessageContent>
+                </Message>
+              ))}
+              
+              {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                <Message align="start">
+                  <MessageAvatar>
+                    <Avatar className="h-8 w-8 border bg-indigo-500/10 border-indigo-500/20">
+                      <AvatarFallback><Bot className="h-4 w-4 text-indigo-400" /></AvatarFallback>
+                    </Avatar>
+                  </MessageAvatar>
+                  <MessageContent>
+                    <Bubble variant="muted" className="bg-white/5 border border-white/5">
+                      <BubbleContent className="flex items-center gap-3 py-3">
+                        <div className="flex gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                      </MessageFooter>
-                    </MessageContent>
-                  </Message>
-                ))}
-                
-                {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <Message align="start">
-                    <MessageAvatar>
-                      <Avatar className="h-8 w-8 border bg-primary/10">
-                        <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
-                      </Avatar>
-                    </MessageAvatar>
-                    <MessageContent>
-                      <Bubble variant="muted">
-                        <BubbleContent className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Thinking...</span>
-                        </BubbleContent>
-                      </Bubble>
-                    </MessageContent>
-                  </Message>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-        <CardFooter className="px-0 pb-0 pt-4">
-          <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+                      </BubbleContent>
+                    </Bubble>
+                  </MessageContent>
+                </Message>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4 pointer-events-none">
+        <div className="max-w-3xl mx-auto w-full pointer-events-auto">
+          <form onSubmit={handleSubmit} className="relative flex w-full items-center bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.3)] rounded-[24px] p-2 transition-all focus-within:ring-1 focus-within:ring-white/20 focus-within:bg-zinc-900/80 group">
             <Input
               value={input}
               onChange={handleInputChange}
-              placeholder="Ask anything..."
-              className="flex-1 bg-muted/50 border-border/50 focus-visible:ring-1"
+              placeholder="Message Nexus AI..."
+              className="flex-1 bg-transparent border-0 focus-visible:ring-0 shadow-none text-[15px] px-4 py-6 h-auto placeholder:text-muted-foreground/70"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()}>
+            <Button type="submit" size="icon" disabled={isLoading || !input?.trim()} className="h-10 w-10 rounded-[16px] bg-white text-black hover:bg-zinc-200 shrink-0 transition-colors disabled:opacity-50 disabled:bg-white/10 disabled:text-white/40">
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>
           </form>
-        </CardFooter>
-      </Card>
+          <p className="text-center text-[11px] text-muted-foreground/60 mt-3 font-medium">
+            Nexus AI can make mistakes. Consider verifying important information.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
