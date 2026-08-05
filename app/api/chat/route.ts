@@ -119,17 +119,41 @@ async function executeTool(
 
   if (name === 'summarize_workspace') {
     console.log(`[AI Tool] Executing 'summarize_workspace' for workspaceId=${workspaceId}`)
-    const docs = await prisma.documentChunk.findMany({ where: { workspaceId }, take: 20 })
-    const docsText = docs.map((d: any) => d.content).join('\n\n')
-    if (!docsText) {
+
+    // Fetch ALL chunks with their document name for complete coverage
+    const chunks = await prisma.documentChunk.findMany({
+      where: { workspaceId },
+      include: { document: { select: { name: true } } },
+      orderBy: [{ documentId: 'asc' }, { createdAt: 'asc' }],
+      take: 200, // up from 20 — covers large workspaces
+    })
+
+    if (chunks.length === 0) {
       console.log(`[AI Tool] No documents found in workspace ${workspaceId}`)
       return 'No documents found to summarize.'
     }
-    console.log(`[AI Tool] Generating summary across ${docs.length} chunks with ${CEREBRAS_MODEL}...`)
+
+    // Group chunks by document so the LLM gets full per-doc context
+    const docMap = new Map<string, { name: string; texts: string[] }>()
+    for (const chunk of chunks) {
+      const docName = (chunk as any).document?.name || chunk.documentId
+      if (!docMap.has(chunk.documentId)) docMap.set(chunk.documentId, { name: docName, texts: [] })
+      docMap.get(chunk.documentId)!.texts.push(chunk.content)
+    }
+
+    const docsText = Array.from(docMap.values())
+      .map(({ name, texts }) => `### Document: ${name}\n${texts.join('\n')}`)
+      .join('\n\n---\n\n')
+
+    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${chunks.length} chunks...`)
+
     const summaryResp = await cerebras.chat.completions.create({
-      messages: [{ role: 'user', content: `Summarize the following workspace documents:\n\n${docsText}` }],
+      messages: [{
+        role: 'user',
+        content: `You are summarizing a workspace knowledge base. For each document, write a concise paragraph covering the key topics, facts, and conclusions it contains. Then write a brief overall workspace summary at the end.\n\nWorkspace documents:\n\n${docsText}`,
+      }],
       model: CEREBRAS_MODEL,
-      max_completion_tokens: 1024,
+      max_completion_tokens: 2048,
       temperature: 0.2,
       stream: false,
     })
@@ -138,12 +162,12 @@ async function executeTool(
       data: {
         workspaceId,
         toolName: 'summarize_workspace',
-        arguments: {},
+        arguments: { documentCount: docMap.size, chunkCount: chunks.length },
         result: { summary, status: 'success' },
       },
     })
-    console.log(`[AI Tool] 'summarize_workspace' completed.`)
-    return `Workspace summarized successfully. Summary:\n${summary}`
+    console.log(`[AI Tool] 'summarize_workspace' completed — ${docMap.size} docs.`)
+    return `Workspace summarized across ${docMap.size} document(s):\n\n${summary}`
   }
 
   return `Unknown tool: ${name}`

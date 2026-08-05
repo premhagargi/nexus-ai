@@ -557,10 +557,31 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   // Key forces ChatInterface to fully re-mount after clearing
   const [chatKey, setChatKey] = useState(0)
 
-  const fetchHistory = useCallback(() => {
+  const CACHE_KEY = `nexus_chat_history_${workspaceId}`
+
+  const fetchHistory = useCallback((forceRefresh = false) => {
+    // Serve from sessionStorage cache instantly
+    if (!forceRefresh) {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { messages, ts } = JSON.parse(cached)
+          const AGE_MS = Date.now() - ts
+          // Serve cache immediately if < 5 minutes old
+          if (AGE_MS < 5 * 60 * 1000 && Array.isArray(messages)) {
+            setInitialMessages(messages)
+            setHistoryLoaded(true)
+            // Still revalidate in background silently
+            fetchHistory(true)
+            return
+          }
+        }
+      } catch {}
+    }
+
     setHistoryLoaded(false)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
 
     fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`, {
       signal: controller.signal,
@@ -570,30 +591,33 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
         return r.json()
       })
       .then((data) => {
-        if (data.messages && Array.isArray(data.messages)) {
-          setInitialMessages(data.messages)
-        } else {
-          setInitialMessages([])
-        }
+        const msgs = data.messages && Array.isArray(data.messages) ? data.messages : []
+        setInitialMessages(msgs)
+        // Write to cache
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ messages: msgs, ts: Date.now() }))
+        } catch {}
       })
-      .catch((err) => {
+      .catch(() => {
         clearTimeout(timeoutId)
         setInitialMessages([])
       })
       .finally(() => {
         setHistoryLoaded(true)
       })
-  }, [workspaceId])
+  }, [workspaceId, CACHE_KEY])
 
   useEffect(() => {
     fetchHistory()
   }, [fetchHistory])
 
   const handleHistoryCleared = useCallback(() => {
+    // Bust the cache
+    try { sessionStorage.removeItem(CACHE_KEY) } catch {}
     setInitialMessages([])
     setChatKey((k) => k + 1)
     setHistoryLoaded(true)
-  }, [])
+  }, [CACHE_KEY])
 
   if (!historyLoaded) return <ChatSkeleton />
 
