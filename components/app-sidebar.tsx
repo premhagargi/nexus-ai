@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Field, FieldGroup } from '@/components/ui/field'
 import { createWorkspace } from '@/app/actions'
-import { Loader2, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Workspace[], currentWorkspaceId?: string }) {
   const pathname = usePathname()
@@ -79,7 +80,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
               <DropdownMenuLabel>Your Workspaces</DropdownMenuLabel>
               {optimisticWorkspaces.map(w => (
                 <DropdownMenuItem key={w.id} onSelect={() => router.push(`/dashboard/${w.id}`)}>
-                  {w.id.startsWith('temp-') ? <Loader2 className="h-3 w-3 animate-spin mr-2 inline" /> : null}
+                  {w.id.startsWith('temp-') ? <Spinner className="h-3 w-3 mr-2 inline" /> : null}
                   {w.name}
                   {w.id === currentWorkspace?.id && <DropdownMenuShortcut>✓</DropdownMenuShortcut>}
                 </DropdownMenuItem>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -71,6 +72,7 @@ export default function SignupPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button className="w-full" type="submit" disabled={loading}>
+              {loading && <Spinner className="mr-2 h-4 w-4 text-inherit" />}
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
