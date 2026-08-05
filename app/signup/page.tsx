@@ -20,12 +20,13 @@ export default function SignupPage() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email')
     const password = formData.get('password')
+    const workspaceName = formData.get('workspaceName')
 
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, workspaceName })
       })
       const data = await res.json()
       
@@ -55,6 +56,10 @@ export default function SignupPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="workspaceName">Organization Name</Label>
+              <Input id="workspaceName" name="workspaceName" type="text" placeholder="Acme Corp" required className="bg-muted" />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" placeholder="m@example.com" required className="bg-muted" />

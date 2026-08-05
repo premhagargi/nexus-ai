@@ -11,6 +11,7 @@ import { useState, useOptimistic, startTransition } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Field, FieldGroup } from '@/components/ui/field'
 import { createWorkspace } from '@/app/actions'
 import { Loader2, Plus } from 'lucide-react'
 
@@ -96,35 +97,32 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
         </DropdownMenu>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-background/95 backdrop-blur-2xl border-border text-foreground shadow-2xl">
+          <DialogContent className="sm:max-w-sm">
             <form onSubmit={handleCreateWorkspace}>
               <DialogHeader>
-                <DialogTitle className="text-xl">Create Workspace</DialogTitle>
-                <DialogDescription className="text-muted-foreground">
-                  Add a new knowledge workspace for your team.
+                <DialogTitle>Create Workspace</DialogTitle>
+                <DialogDescription>
+                  Add a new workspace to organize your knowledge.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Workspace Name
-                  </Label>
+              <FieldGroup>
+                <Field>
+                  <Label htmlFor="name">Workspace Name</Label>
                   <Input
                     id="name"
                     value={newWorkspaceName}
                     onChange={(e) => setNewWorkspaceName(e.target.value)}
-                    className="bg-muted/50 border-border focus-visible:ring-indigo-500"
                     placeholder="e.g. Engineering Docs"
                     autoComplete="off"
                   />
-                </div>
-              </div>
+                </Field>
+              </FieldGroup>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="hover:bg-muted/50">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={!newWorkspaceName.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
-                  Create
+                <Button type="submit" disabled={!newWorkspaceName.trim()}>
+                  Create Workspace
                 </Button>
               </DialogFooter>
             </form>

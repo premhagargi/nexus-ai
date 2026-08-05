@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const email = body.email?.trim()
     const password = body.password
+    const workspaceName = body.workspaceName?.trim() || 'My Workspace'
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
@@ -26,9 +27,29 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        ownedWorkspaces: {
+          create: {
+            name: workspaceName,
+            slug: workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6)
+          }
+        }
+      },
+      include: {
+        ownedWorkspaces: true
       }
     })
+    
+    // Add membership for the created workspace
+    if (user.ownedWorkspaces.length > 0) {
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          workspaceId: user.ownedWorkspaces[0].id,
+          role: 'OWNER'
+        }
+      })
+    }
 
     await setSession(user.id)
 
