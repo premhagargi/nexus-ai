@@ -23,7 +23,7 @@ export default async function SettingsPage({
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+        <h2 className="text-3xl font-semibold tracking-tighter">Settings</h2>
         <p className="text-muted-foreground">
           Manage workspace settings and preferences.
         </p>

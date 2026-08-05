@@ -60,7 +60,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Nexus AI</span>
+          <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Nexus AI</span>
         </div>
 
         <DropdownMenu>

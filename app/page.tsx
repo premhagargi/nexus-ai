@@ -181,7 +181,7 @@ function Navbar() {
             <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
               <Network className="w-3.5 h-3.5 text-zinc-950" />
             </div>
-            <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">nexus</span>
+            <span className="text-[15px] font-semibold text-zinc-100 tracking-tighter">nexus</span>
           </a>
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
@@ -260,7 +260,7 @@ function WorkspaceMockup() {
         <div className="hidden sm:flex w-48 flex-col border-r border-zinc-800/60 bg-zinc-900/30 p-3">
           <div className="flex items-center gap-2 mb-4 px-2">
             <div className="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <span className="text-[9px] font-bold text-emerald-400">A</span>
+              <span className="text-[9px] font-semibold text-emerald-400">A</span>
             </div>
             <span className="text-[12px] font-medium text-zinc-300">Acme Corp</span>
           </div>
@@ -404,7 +404,7 @@ function Hero() {
             </motion.div>
 
             <motion.h1
-              className="mt-6 text-[clamp(2.5rem,5.5vw,4.5rem)] font-bold leading-[1.05] tracking-[-0.035em] text-zinc-100"
+              className="mt-6 text-[clamp(2.5rem,5.5vw,4.5rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-zinc-100"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -509,7 +509,7 @@ function Problem() {
             <SectionLabel>The problem</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
               Your team&apos;s knowledge is trapped
               <span className="text-zinc-600"> in forty different tabs.</span>
             </h2>
@@ -534,7 +534,7 @@ function Problem() {
                 key={stat.label}
                 className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:border-zinc-700/60 transition-colors"
               >
-                <div className="text-[clamp(1.5rem,3vw,2.25rem)] font-bold text-zinc-100 tracking-tight">{stat.n}</div>
+                <div className="text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-zinc-100 tracking-tighter">{stat.n}</div>
                 <div className="mt-1 text-[13px] text-zinc-500 leading-snug">{stat.label}</div>
               </div>
             ))}
@@ -565,7 +565,7 @@ function Workflow() {
               <SectionLabel>How it works</SectionLabel>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
                 From raw documents
                 <br />
                 <span className="text-zinc-500">to grounded answers.</span>
@@ -662,7 +662,7 @@ function RAGFlow() {
             <SectionLabel>Under the hood</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
               Retrieval-augmented generation,
               <span className="text-zinc-500"> without the plumbing.</span>
             </h2>
@@ -753,7 +753,7 @@ function Features() {
           <SectionLabel>Capabilities</SectionLabel>
         </Reveal>
         <Reveal delay={0.1}>
-          <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100 max-w-lg">
+          <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100 max-w-lg">
             Everything you need.
             <span className="text-zinc-500"> Nothing you don&apos;t.</span>
           </h2>
@@ -815,7 +815,7 @@ function Architecture() {
             <SectionLabel>Architecture</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
               Built for production.
               <span className="text-zinc-500"> Not a prototype.</span>
             </h2>
@@ -892,7 +892,7 @@ function Security() {
               <SectionLabel>Enterprise</SectionLabel>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-zinc-100">
                 Security is not
                 <br />
                 <span className="text-zinc-500">an afterthought.</span>
@@ -945,7 +945,7 @@ function FinalCTA() {
           <div className="relative bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-10 md:p-16 overflow-hidden">
             <DotGrid />
             <div className="relative z-10 max-w-lg">
-              <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-bold leading-[1.1] tracking-[-0.03em] text-zinc-100">
+              <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-[-0.03em] text-zinc-100">
                 Stop searching.
                 <br />
                 Start knowing.
@@ -994,7 +994,7 @@ function Footer() {
               <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
                 <Network className="w-3.5 h-3.5 text-zinc-950" />
               </div>
-              <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">nexus</span>
+              <span className="text-[15px] font-semibold text-zinc-100 tracking-tighter">nexus</span>
             </div>
             <p className="text-[13px] text-zinc-600 leading-relaxed max-w-[200px]">
               The AI workspace for teams that take their knowledge seriously.

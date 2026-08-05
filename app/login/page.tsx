@@ -48,7 +48,7 @@ export default function LoginPage() {
       
       <Card className="w-full max-w-sm relative z-10 border-white/10 bg-black/40 backdrop-blur-xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Login to Nexus AI</CardTitle>
+          <CardTitle className="text-2xl font-semibold tracking-tighter">Login to Nexus AI</CardTitle>
           <CardDescription>
             Enter your email and password to sign in
           </CardDescription>

@@ -17,7 +17,7 @@ export default async function ToolLogsPage({
   return (
     <div className="space-y-6 h-full flex flex-col">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Tool Execution Logs</h2>
+        <h2 className="text-3xl font-semibold tracking-tighter">Tool Execution Logs</h2>
         <p className="text-muted-foreground">
           Audit trail for AI tool usage in this workspace.
         </p>

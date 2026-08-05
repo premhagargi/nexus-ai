@@ -48,7 +48,7 @@ export default function SignupPage() {
       
       <Card className="w-full max-w-sm relative z-10 border-white/10 bg-black/40 backdrop-blur-xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+          <CardTitle className="text-2xl font-semibold tracking-tighter">Create an account</CardTitle>
           <CardDescription>
             Enter your email below to create your account
           </CardDescription>

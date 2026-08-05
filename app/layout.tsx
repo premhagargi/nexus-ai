@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${inter.className} tracking-tighter antialiased`} suppressHydrationWarning>
         <TooltipProvider>
           {children}
           <Toaster />

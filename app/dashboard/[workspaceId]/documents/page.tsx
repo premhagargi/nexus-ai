@@ -19,7 +19,7 @@ export default async function DocumentsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Documents</h2>
+          <h2 className="text-3xl font-semibold tracking-tighter">Documents</h2>
           <p className="text-muted-foreground">
             Manage your workspace knowledge base.
           </p>
