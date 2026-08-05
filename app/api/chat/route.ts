@@ -104,13 +104,23 @@ Context from workspace documents:
 ${context}
 `;
 
-    console.log('[Chat Route] workspaceId:', workspaceId)
-    console.log('[Chat Route] context length:', context.length)
+    const formattedMessages = (Array.isArray(messages) ? messages : [])
+      .map((m: any) => {
+        let content = m.content
+        if (!content && Array.isArray(m.parts)) {
+          content = m.parts.map((p: any) => (typeof p === 'string' ? p : p?.text || '')).join('')
+        }
+        return {
+          role: m.role || 'user',
+          content: typeof content === 'string' ? content : '',
+        }
+      })
+      .filter((m: any) => m.content.trim().length > 0)
 
     try {
       const result = streamText({
         model: google('gemini-1.5-flash') as any,
-        messages,
+        messages: formattedMessages.length > 0 ? formattedMessages : [{ role: 'user', content: queryText || 'hi' }],
         system: systemPrompt,
         tools: {
           save_task: tool({
