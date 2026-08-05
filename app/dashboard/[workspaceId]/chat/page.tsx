@@ -42,7 +42,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
         <CardHeader className="px-0 pt-0">
           <CardTitle>AI Assistant</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-0 rounded-md border bg-muted/20">
+        <CardContent className="flex-1 overflow-y-auto p-0">
           <ScrollArea className="h-full p-4">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground p-8">
