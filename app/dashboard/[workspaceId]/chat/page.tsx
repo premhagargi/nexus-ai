@@ -545,7 +545,7 @@ function ChatInterface({
 
       {/* ── Fixed bottom input panel (visible only when messages exist) ── */}
       {allMessages.length > 0 && (
-        <div className="shrink-0 border-t border-border/30 bg-background/30 backdrop-blur-md -mb-6 -mx-6 px-6 pt-2.5 pb-3 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="shrink-0 bg-transparent backdrop-blur-md -mb-6 -mx-6 px-6 pt-2.5 pb-3 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="mx-auto max-w-3xl">
             <div className="relative flex items-end gap-2 rounded-xl border border-border/60 bg-muted/40 backdrop-blur-sm px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-md focus-within:shadow-indigo-500/5">
               <textarea
