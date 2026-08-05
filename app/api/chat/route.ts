@@ -90,7 +90,7 @@ ${context}
     console.log('[Chat Route] context length:', context.length)
 
     const result = streamText({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash') as any,
       messages,
       system: systemPrompt,
       tools: {
@@ -136,7 +136,7 @@ ${context}
             if (!docsText) return 'No documents found to summarize.'
             
             const summaryResult = await generateText({
-              model: google('gemini-1.5-flash'),
+              model: google('gemini-1.5-flash') as any,
               prompt: `Summarize the following workspace documents:\n\n${docsText}`
             })
             
