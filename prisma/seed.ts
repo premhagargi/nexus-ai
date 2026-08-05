@@ -11,7 +11,8 @@ async function main() {
     update: {},
     create: {
       id: userId,
-      email: 'test@example.com'
+      email: 'test@example.com',
+      password: 'dummy_password_hash'
     }
   })
 
