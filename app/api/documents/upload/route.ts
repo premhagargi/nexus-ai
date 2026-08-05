@@ -213,7 +213,11 @@ async function processDocument(documentId: string, storagePath: string, workspac
     // Update document status to COMPLETED
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'COMPLETED' }
+      data: {
+        status: 'COMPLETED',
+        chunkCount: docs.length,
+        errorMessage: null
+      }
     })
 
     console.log(`[DocUpload] Successfully processed documentId=${documentId} (${docs.length} total chunks).`)
@@ -227,9 +231,13 @@ async function processDocument(documentId: string, storagePath: string, workspac
       console.error(`[DocUpload] Failed to clean up chunks for documentId=${documentId}:`, cleanupErr)
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Unknown processing error'
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'FAILED' }
+      data: {
+        status: 'FAILED',
+        errorMessage
+      }
     })
   }
 }

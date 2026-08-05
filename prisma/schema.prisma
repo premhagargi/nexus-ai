@@ -65,13 +65,15 @@ enum DocumentStatus {
 }
 
 model Document {
-  id          String         @id @default(uuid())
-  workspaceId String
-  filename    String
-  storageUrl  String
-  uploadedBy  String
-  status      DocumentStatus @default(PENDING)
-  createdAt   DateTime       @default(now())
+  id           String         @id @default(uuid())
+  workspaceId  String
+  filename     String
+  storageUrl   String
+  uploadedBy   String
+  status       DocumentStatus @default(PENDING)
+  errorMessage String?
+  chunkCount   Int?           @default(0)
+  createdAt    DateTime       @default(now())
 
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   uploader    User            @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
