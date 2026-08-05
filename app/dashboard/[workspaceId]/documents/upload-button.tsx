@@ -77,12 +77,12 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
       setOpen(val)
       if (!val) setSelectedFile(null)
     }}>
-      <DialogTrigger asChild>
+      <DialogTrigger render={
         <Button>
           <Upload className="mr-2 h-4 w-4" />
           Upload Document
         </Button>
-      </DialogTrigger>
+      } />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
