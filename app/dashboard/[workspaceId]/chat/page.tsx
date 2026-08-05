@@ -19,14 +19,32 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { toast } from 'sonner'
 
 function getMessageText(m: any): string {
-  if (typeof m.content === 'string' && m.content) return m.content
-  if (Array.isArray(m.parts)) {
-    return m.parts
-      .filter((p: any) => p.type === 'text' && typeof p.text === 'string')
-      .map((p: any) => p.text)
+  if (!m) return ''
+  let text = ''
+  if (typeof m.content === 'string' && m.content.trim()) {
+    text = m.content
+  } else if (typeof m.text === 'string' && m.text.trim()) {
+    text = m.text
+  } else if (Array.isArray(m.parts) && m.parts.length > 0) {
+    text = m.parts
+      .map((p: any) => {
+        if (typeof p === 'string') return p
+        if (p?.type === 'text' && typeof p.text === 'string') return p.text
+        if (typeof p?.text === 'string') return p.text
+        return ''
+      })
+      .filter(Boolean)
       .join('')
   }
-  return ''
+  if (!text && typeof m === 'string') {
+    text = m
+  }
+  if (typeof text === 'string' && text.startsWith('0:"')) {
+    try {
+      text = JSON.parse(text.slice(2))
+    } catch (e) {}
+  }
+  return text
 }
 
 export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
