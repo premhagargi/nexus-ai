@@ -49,9 +49,9 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
     try {
       const newId = await createWorkspace(name)
       router.push(`/dashboard/${newId}`)
+      router.refresh()
     } catch (error) {
       console.error(error)
-      // On error, the optimistic update will be reverted naturally when the server state refreshes
     }
   }
 
@@ -88,7 +88,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-muted" />
             <DropdownMenuGroup>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsDialogOpen(true) }}>
+              <DropdownMenuItem onClick={() => setIsDialogOpen(true)} closeOnClick={false}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Workspace
                 <DropdownMenuShortcut>⌘+N</DropdownMenuShortcut>

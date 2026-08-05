@@ -24,6 +24,6 @@ export async function createWorkspace(name: string) {
     }
   })
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
   return workspace.id
 }
