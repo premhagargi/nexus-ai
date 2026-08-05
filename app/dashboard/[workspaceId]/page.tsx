@@ -16,7 +16,7 @@ export default async function WorkspaceOverview({
   ])
 
   return (
-    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 max-w-5xl">
+    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 w-full">
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-b from-indigo-500/10 to-purple-500/5 p-5 border border-white/5 shadow-xl">
         <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
           <div className="w-48 h-48 bg-indigo-500 rounded-full blur-[80px] animate-pulse"></div>
