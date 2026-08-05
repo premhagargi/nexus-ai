@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool, generateText } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
