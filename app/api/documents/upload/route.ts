@@ -7,7 +7,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
 import { TaskType } from '@google/generative-ai'
 import mammoth from 'mammoth'
 // @ts-ignore
-import pdfParse from 'pdf-parse'
+import pdfParse from 'pdf-parse/lib/pdf-parse.js'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 minutes for serverless processing
