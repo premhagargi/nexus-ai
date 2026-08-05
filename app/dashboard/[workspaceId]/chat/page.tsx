@@ -439,19 +439,65 @@ function ChatInterface({
         className="flex-1 overflow-y-auto overscroll-contain scrollbar-none"
         style={{ scrollbarWidth: 'none' } as React.CSSProperties}
       >
-        {allMessages.length === 0 ? (
-          /* ── Empty state ── */
-          <div className="flex h-full items-center justify-center">
-            <div className="flex flex-col items-center gap-4 px-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center">
+          /* ── Empty state with centered input (ChatGPT/Claude style) ── */
+          <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+            <div className="w-full max-w-2xl flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex h-16 w-16 items-center justify-center mb-4">
                 <img src="/ai-magic-icon.webp" alt="Nexus AI" className="h-full w-full object-contain drop-shadow-lg" />
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">
-                  How can I help you today?
-                </h2>
-                <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">
-                  Ask questions about your workspace documents or instruct me to perform tasks.
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-1.5">
+                How can I help you today?
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-8">
+                Ask questions about your workspace documents or instruct me to perform tasks.
+              </p>
+
+              {/* Centered Input Box */}
+              <div className="w-full text-left">
+                <div className="relative flex items-end gap-2 rounded-2xl border border-border/80 bg-muted/40 backdrop-blur-md px-4 py-2.5 shadow-lg transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-xl focus-within:shadow-indigo-500/5">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSend()
+                      }
+                    }}
+                    placeholder="Message Nexus AI…"
+                    className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
+                    disabled={isLoading}
+                    rows={1}
+                    style={{ minHeight: '28px', maxHeight: '200px' }}
+                  />
+
+                  {isLoading ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => stop?.()}
+                      className="h-8 w-8 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                      aria-label="Stop generating"
+                    >
+                      <Square className="h-4 w-4 fill-current" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="icon"
+                      onClick={handleSend}
+                      disabled={!input.trim()}
+                      className="h-8 w-8 shrink-0 rounded-xl bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:text-muted-foreground transition-all"
+                      aria-label="Send message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="mt-2 text-center text-[11px] text-muted-foreground/40">
+                  Nexus AI can make mistakes. Verify important information.
                 </p>
               </div>
             </div>
@@ -497,56 +543,58 @@ function ChatInterface({
         )}
       </div>
 
-      {/* ── Fixed input panel (ChatGPT style glassmorphism) ── */}
-      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-xl -mb-6 -mx-6 px-6 pt-2.5 pb-3 transition-all">
-        <div className="mx-auto max-w-3xl">
-          <div className="relative flex items-end gap-2 rounded-xl border border-border/60 bg-muted/40 backdrop-blur-sm px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-md focus-within:shadow-indigo-500/5">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
-              placeholder="Message Nexus AI…"
-              className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
-              disabled={isLoading}
-              rows={1}
-              style={{ minHeight: '24px', maxHeight: '200px' }}
-            />
+      {/* ── Fixed bottom input panel (visible only when messages exist) ── */}
+      {allMessages.length > 0 && (
+        <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-xl -mb-6 -mx-6 px-6 pt-2.5 pb-3 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="mx-auto max-w-3xl">
+            <div className="relative flex items-end gap-2 rounded-xl border border-border/60 bg-muted/40 backdrop-blur-sm px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-md focus-within:shadow-indigo-500/5">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSend()
+                  }
+                }}
+                placeholder="Message Nexus AI…"
+                className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
+                disabled={isLoading}
+                rows={1}
+                style={{ minHeight: '24px', maxHeight: '200px' }}
+              />
 
-            {isLoading ? (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => stop?.()}
-                className="h-8 w-8 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
-                aria-label="Stop generating"
-              >
-                <Square className="h-4 w-4 fill-current" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="icon"
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="h-8 w-8 shrink-0 rounded-xl bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:text-muted-foreground transition-all"
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
+              {isLoading ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => stop?.()}
+                  className="h-8 w-8 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                  aria-label="Stop generating"
+                >
+                  <Square className="h-4 w-4 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="h-8 w-8 shrink-0 rounded-xl bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:text-muted-foreground transition-all"
+                  aria-label="Send message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <p className="mt-1 text-center text-[10px] text-muted-foreground/40">
+              Nexus AI can make mistakes. Verify important information.
+            </p>
           </div>
-          <p className="mt-1 text-center text-[10px] text-muted-foreground/40">
-            Nexus AI can make mistakes. Verify important information.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   )
 }
