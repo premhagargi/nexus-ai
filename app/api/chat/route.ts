@@ -52,14 +52,30 @@ function extractTextFromMessage(m: any): string {
   return ''
 }
 
-/* ─── AI SDK UI stream chunk encoder ─── */
-function encodeTextChunk(text: string): Uint8Array {
-  return new TextEncoder().encode(`0:${JSON.stringify(text)}\n`)
+/* ─── ai@7 UI message stream encoders (SSE JSON format) ─────────────────────
+   Wire format:  data: {JSON}\n\n   (parsed by JsonToSseTransformStream in ai@7)
+   Header:       x-vercel-ai-ui-message-stream: v1
+   Types used:   text-start, text-delta, text-end  (see uiMessageChunkSchema)
+   ─────────────────────────────────────────────────────────────────────────── */
+const enc = new TextEncoder()
+function sseChunk(obj: Record<string, unknown>): Uint8Array {
+  return enc.encode(`data: ${JSON.stringify(obj)}\n\n`)
 }
-function encodeFinishChunk(): Uint8Array {
-  return new TextEncoder().encode(
-    `e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0},"isContinued":false}\n`
-  )
+function sseDone(): Uint8Array {
+  return enc.encode('data: [DONE]\n\n')
+}
+
+let _partIdCounter = 0
+function newPartId() {
+  return `part-${Date.now()}-${++_partIdCounter}`
+}
+
+const UI_STREAM_HEADERS = {
+  'content-type': 'text/event-stream',
+  'cache-control': 'no-cache',
+  'connection': 'keep-alive',
+  'x-vercel-ai-ui-message-stream': 'v1',
+  'x-accel-buffering': 'no',
 }
 
 /* ─── Tool definitions (OpenAI function-calling format) ─── */
@@ -262,12 +278,13 @@ ${context}`
     const cerebras = new Cerebras({ apiKey: cerebrasApiKey })
 
     /* ── Streaming response with tool support ── */
-    const encoder = new TextEncoder()
-
     const readable = new ReadableStream({
       async start(controller) {
         let attempts = 0
         const MAX_ATTEMPTS = 3
+
+        // Each text part needs a stable ID across start/delta/end
+        const textPartId = newPartId()
 
         while (attempts < MAX_ATTEMPTS) {
           attempts++
@@ -289,6 +306,7 @@ ${context}`
             let finishReason = ''
             const accToolCalls: Record<number, { id: string; type: string; function: { name: string; arguments: string } }> = {}
             let assistantText = ''
+            let textStarted = false
 
             for await (const chunk of stream) {
               const choice = chunk.choices?.[0]
@@ -297,10 +315,15 @@ ${context}`
 
               const delta = choice.delta as any
 
-              /* Stream text delta to client */
+              /* Stream text delta to client in ai@7 format */
               if (delta?.content) {
+                if (!textStarted) {
+                  // Signal start of a new text part
+                  controller.enqueue(sseChunk({ type: 'text-start', id: textPartId }))
+                  textStarted = true
+                }
                 assistantText += delta.content
-                controller.enqueue(encodeTextChunk(delta.content))
+                controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: delta.content }))
               }
 
               /* Accumulate tool call deltas */
@@ -315,6 +338,11 @@ ${context}`
                   if (tc.function?.arguments) accToolCalls[idx].function.arguments += tc.function.arguments
                 }
               }
+            }
+
+            // Close the text part
+            if (textStarted) {
+              controller.enqueue(sseChunk({ type: 'text-end', id: textPartId }))
             }
 
             console.log(`[Chat API] Stream done. finish_reason="${finishReason}"`)
@@ -349,13 +377,24 @@ ${context}`
                 stream: true,
               })
 
+              const followUpPartId = newPartId()
+              let followUpStarted = false
               for await (const chunk of followUpStream) {
                 const text = (chunk.choices?.[0]?.delta as any)?.content || ''
-                if (text) controller.enqueue(encodeTextChunk(text))
+                if (text) {
+                  if (!followUpStarted) {
+                    controller.enqueue(sseChunk({ type: 'text-start', id: followUpPartId }))
+                    followUpStarted = true
+                  }
+                  controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
+                }
+              }
+              if (followUpStarted) {
+                controller.enqueue(sseChunk({ type: 'text-end', id: followUpPartId }))
               }
             }
 
-            controller.enqueue(encodeFinishChunk())
+            controller.enqueue(sseDone())
             controller.close()
             return // success — exit retry loop
 
@@ -372,8 +411,11 @@ ${context}`
                 ? '⚠️ The Cerebras API is currently overloaded. Please try again in a moment.'
                 : `⚠️ An error occurred: ${err?.message || 'Unknown error'}`
               console.error(`[Chat API] Final failure after ${attempts} attempt(s):`, err)
-              controller.enqueue(encodeTextChunk(errText))
-              controller.enqueue(encodeFinishChunk())
+              const errPartId = newPartId()
+              controller.enqueue(sseChunk({ type: 'text-start', id: errPartId }))
+              controller.enqueue(sseChunk({ type: 'text-delta', id: errPartId, delta: errText }))
+              controller.enqueue(sseChunk({ type: 'text-end', id: errPartId }))
+              controller.enqueue(sseDone())
               controller.close()
               return
             }
@@ -386,12 +428,7 @@ ${context}`
       },
     })
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'x-vercel-ai-data-stream': 'v1',
-      },
-    })
+    return new Response(readable, { headers: UI_STREAM_HEADERS })
 
   } catch (e: any) {
     console.error('[Chat API] Fatal POST Handler Error:', e)

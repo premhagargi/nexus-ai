@@ -294,7 +294,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   const { workspaceId } = use(params)
   const [input, setInput] = useState('')
 
-  const { messages, sendMessage, status, regenerate, stop } = useChat({
+  const { messages, sendMessage, status, stop } = useChat({
     api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
     body: { workspaceId },
   })
@@ -334,6 +334,18 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
       toast.error(err?.message || 'Failed to send message')
     }
   }
+
+  // In ai@7, sendMessage(null) re-submits the last user message (= regenerate)
+  const handleRegenerate = useCallback(async () => {
+    if (isLoading) return
+    shouldAutoScroll.current = true
+    try {
+      await sendMessage(null as any, { body: { workspaceId } })
+    } catch (err: any) {
+      console.error('[Chat UI] Regenerate error:', err)
+      toast.error(err?.message || 'Failed to regenerate')
+    }
+  }, [sendMessage, workspaceId, isLoading])
 
   const showThinking =
     isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user'
@@ -376,7 +388,7 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                   role={m.role}
                   text={text}
                   isLast={idx === messages.length - 1}
-                  onRegenerate={regenerate}
+                  onRegenerate={handleRegenerate}
                   canRegenerate={!isLoading}
                 />
               )
