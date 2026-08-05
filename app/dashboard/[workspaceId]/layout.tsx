@@ -36,7 +36,7 @@ export default async function WorkspaceLayout({
             <h1 className="text-[15px] font-semibold tracking-tight">{currentWorkspace?.name}</h1>
           </div>
         </header>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
       </main>

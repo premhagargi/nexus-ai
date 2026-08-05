@@ -24,7 +24,7 @@ export function DocumentsClient({ initialDocuments, workspaceId }: { initialDocu
   }, [isProcessing, router])
 
   return (
-    <div className="flex flex-col w-full mt-6 space-y-8 px-4 md:px-8 pb-10">
+    <div className="flex flex-col w-full space-y-8 pb-10">
       <div className="flex items-center justify-between space-y-5 border-b border-border/50 pb-6">
         <div>
           <h2 className="text-3xl font-semibold tracking-tighter text-foreground">Documents</h2>
