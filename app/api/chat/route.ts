@@ -48,7 +48,17 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1];
     let context = '';
     
-    if (lastMessage && lastMessage.role === 'user') {
+    let queryText = ''
+    if (lastMessage) {
+      if (typeof lastMessage.content === 'string') {
+        queryText = lastMessage.content
+      } else if (Array.isArray(lastMessage.parts)) {
+        queryText = lastMessage.parts.map((p: any) => (typeof p === 'string' ? p : p?.text || '')).join('')
+      }
+    }
+    queryText = (queryText || '').trim()
+
+    if (queryText && (lastMessage.role === 'user' || !lastMessage.role)) {
       try {
         let vector: number[] = []
         if (apiKey) {
@@ -58,13 +68,13 @@ export async function POST(req: NextRequest) {
               taskType: TaskType.RETRIEVAL_DOCUMENT,
               apiKey,
             })
-            vector = await embeddings.embedQuery(lastMessage.content)
+            vector = await embeddings.embedQuery(queryText)
           } catch (e) {
             console.warn('[Chat RAG] embedQuery API call failed, using fallback embedding:', e)
           }
         }
         if (!vector || !Array.isArray(vector) || vector.length === 0) {
-          vector = generateFallbackEmbedding(lastMessage.content || '', 768)
+          vector = generateFallbackEmbedding(queryText, 768)
         }
         
         const vectorStr = `[${vector.join(',')}]`
@@ -164,7 +174,7 @@ ${context}
         }
       });
 
-      return result.toDataStreamResponse();
+      return result.toUIMessageStreamResponse();
     } catch (apiError: any) {
       console.warn('[Chat Route] Model API call exception, returning fallback response:', apiError)
       const fallbackText = context

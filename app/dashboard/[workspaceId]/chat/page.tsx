@@ -81,10 +81,10 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
 
   return (
     <div className="relative flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-3xl mx-auto w-full px-4 pt-8 pb-8">
+      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+        <div className="max-w-3xl mx-auto w-full px-4 py-6 my-auto">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground mt-20">
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground my-12">
               <div className="flex h-20 w-20 items-center justify-center mb-6">
                 <img src="/ai-magic-icon.webp" alt="AI Magic" className="h-full w-full object-contain drop-shadow-[0_8px_16px_rgba(99,102,241,0.3)]" />
               </div>
@@ -105,8 +105,8 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                       </Avatar>
                     </MessageAvatar>
                     <MessageContent>
-                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-muted/50 border border-border/50 shadow-sm'}>
-                        <BubbleContent>
+                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white border-0 shadow-none' : 'bg-muted/80 text-foreground border-0 shadow-none'}>
+                        <BubbleContent className="border-0 shadow-none">
                           {m.role === 'user' ? (
                             <div className="whitespace-pre-wrap text-[15px]">{textContent}</div>
                           ) : (
