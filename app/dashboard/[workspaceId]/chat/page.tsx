@@ -443,8 +443,8 @@ function ChatInterface({
           /* ── Empty state ── */
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-4 px-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-                <Bot className="h-8 w-8 text-white" />
+              <div className="flex h-16 w-16 items-center justify-center">
+                <img src="/ai-magic-icon.webp" alt="Nexus AI" className="h-full w-full object-contain drop-shadow-lg" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-foreground">
