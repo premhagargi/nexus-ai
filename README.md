@@ -20,7 +20,7 @@ A RAG (Retrieval-Augmented Generation) application with an AI assistant that ans
 - **File Storage**: Supabase Storage
 - **ORM**: Prisma
 - **AI/LLM**: Google Gemini 2.5 Flash via AI SDK
-- **Embeddings**: Google Generative AI Embeddings (`text-embedding-004`)
+- **Embeddings**: Google Generative AI Embeddings (`gemini-embedding-001`)
 - **UI**: Tailwind CSS, shadcn/ui
 
 ## Running Locally

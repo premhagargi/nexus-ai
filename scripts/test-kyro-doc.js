@@ -91,7 +91,7 @@ async function runKyroDocSuite() {
   if (apiKey) {
     try {
       embeddings = new GoogleGenerativeAIEmbeddings({
-        model: "text-embedding-004",
+        model: "gemini-embedding-001",
         taskType: TaskType.RETRIEVAL_DOCUMENT,
         apiKey
       });

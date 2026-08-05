@@ -90,7 +90,7 @@ Key features include:
   try {
     if (apiKey) {
       const embeddings = new GoogleGenerativeAIEmbeddings({
-        model: "text-embedding-004",
+        model: "gemini-embedding-001",
         taskType: TaskType.RETRIEVAL_DOCUMENT,
         apiKey,
       });

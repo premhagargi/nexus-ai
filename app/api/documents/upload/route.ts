@@ -169,8 +169,9 @@ async function processDocument(documentId: string, storagePath: string, workspac
     // Embeddings Setup
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const embeddings = new GoogleGenerativeAIEmbeddings({
-      model: "text-embedding-004",
+      model: "gemini-embedding-001",
       taskType: TaskType.RETRIEVAL_DOCUMENT,
+      outputDimensionality: 768,
       apiKey,
     })
 
@@ -199,7 +200,12 @@ async function processDocument(documentId: string, storagePath: string, workspac
       await prisma.$transaction(
         batchDocs.map((doc, j) => {
           let vector = vectors && vectors[j] && Array.isArray(vectors[j]) && vectors[j].length > 0 ? vectors[j] : null
-          if (!vector) {
+          if (vector) {
+            console.log(`[DocUpload] Embedding length:`, vector.length)
+            if (vector.length > 768) {
+              vector = vector.slice(0, 768)
+            }
+          } else {
             vector = generateFallbackEmbedding(doc.pageContent, 768)
           }
           const vectorStr = `[${vector.join(',')}]`

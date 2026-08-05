@@ -2,31 +2,23 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Bot, User, Copy, RefreshCw } from 'lucide-react'
-import { Spinner } from '@/components/ui/spinner'
-import { useEffect, useRef, use, useState } from 'react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'
-import { Bubble, BubbleContent } from '@/components/ui/bubble'
+import { Send, Bot, User, Copy, Check, RefreshCw, Square } from 'lucide-react'
+import { useEffect, useRef, use, useState, useCallback, useLayoutEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { toast } from 'sonner'
+
+/* ─── helpers ─── */
 
 function getMessageText(m: any): string {
   if (!m) return ''
-  let text = ''
-  if (typeof m.content === 'string' && m.content.trim()) {
-    text = m.content
-  } else if (typeof m.text === 'string' && m.text.trim()) {
-    text = m.text
-  } else if (Array.isArray(m.parts) && m.parts.length > 0) {
-    text = m.parts
+  if (typeof m.content === 'string' && m.content.trim()) return m.content
+  if (typeof m.text === 'string' && m.text.trim()) return m.text
+  if (Array.isArray(m.parts) && m.parts.length > 0) {
+    const joined = m.parts
       .map((p: any) => {
         if (typeof p === 'string') return p
         if (p?.type === 'text' && typeof p.text === 'string') return p.text
@@ -35,160 +27,389 @@ function getMessageText(m: any): string {
       })
       .filter(Boolean)
       .join('')
+    if (joined) return joined
   }
-  if (!text && typeof m === 'string') {
-    text = m
-  }
-  if (typeof text === 'string' && text.startsWith('0:"')) {
-    try {
-      text = JSON.parse(text.slice(2))
-    } catch (e) {}
-  }
-  return text
+  if (typeof m === 'string') return m
+  return ''
 }
+
+/* ─── copy button with feedback ─── */
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button
+      onClick={copy}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      aria-label="Copy message"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  )
+}
+
+/* ─── code block with copy ─── */
+
+function CodeBlock({ language, children }: { language: string; children: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(children)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="relative group my-4 rounded-xl overflow-hidden border border-border/60 bg-[#1e1e2e]">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#181825] border-b border-white/5">
+        <span className="text-xs text-white/40 font-mono">{language}</span>
+        <button
+          onClick={copy}
+          className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={language}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          padding: '1rem',
+          background: 'transparent',
+          fontSize: '0.8125rem',
+          lineHeight: '1.6',
+        }}
+      >
+        {children}
+      </SyntaxHighlighter>
+    </div>
+  )
+}
+
+/* ─── markdown renderer ─── */
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        code({ node, inline, className, children, ...props }: any) {
+          const match = /language-(\w+)/.exec(className || '')
+          if (!inline && match) {
+            return (
+              <CodeBlock language={match[1]}>
+                {String(children).replace(/\n$/, '')}
+              </CodeBlock>
+            )
+          }
+          return (
+            <code
+              {...props}
+              className="rounded-md bg-muted/80 px-1.5 py-0.5 text-[0.8125rem] font-mono text-foreground"
+            >
+              {children}
+            </code>
+          )
+        },
+        p({ children }) {
+          return <p className="mb-3 last:mb-0 leading-7">{children}</p>
+        },
+        ul({ children }) {
+          return <ul className="mb-3 last:mb-0 ml-6 list-disc space-y-1.5 leading-7">{children}</ul>
+        },
+        ol({ children }) {
+          return <ol className="mb-3 last:mb-0 ml-6 list-decimal space-y-1.5 leading-7">{children}</ol>
+        },
+        li({ children }) {
+          return <li className="leading-7">{children}</li>
+        },
+        h1({ children }) {
+          return <h1 className="text-xl font-semibold mt-6 mb-3 first:mt-0">{children}</h1>
+        },
+        h2({ children }) {
+          return <h2 className="text-lg font-semibold mt-5 mb-2.5 first:mt-0">{children}</h2>
+        },
+        h3({ children }) {
+          return <h3 className="text-base font-semibold mt-4 mb-2 first:mt-0">{children}</h3>
+        },
+        blockquote({ children }) {
+          return (
+            <blockquote className="border-l-2 border-border pl-4 my-3 text-muted-foreground italic">
+              {children}
+            </blockquote>
+          )
+        },
+        table({ children }) {
+          return (
+            <div className="my-4 overflow-x-auto rounded-lg border border-border">
+              <table className="min-w-full text-sm">{children}</table>
+            </div>
+          )
+        },
+        thead({ children }) {
+          return <thead className="bg-muted/50 border-b border-border">{children}</thead>
+        },
+        th({ children }) {
+          return <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{children}</th>
+        },
+        td({ children }) {
+          return <td className="px-4 py-2.5 border-t border-border/50">{children}</td>
+        },
+        hr() {
+          return <hr className="my-6 border-border/60" />
+        },
+        a({ href, children }) {
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
+              {children}
+            </a>
+          )
+        },
+        strong({ children }) {
+          return <strong className="font-semibold">{children}</strong>
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  )
+}
+
+/* ─── auto-resize textarea hook ─── */
+
+function useAutoResize(value: string) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+  }, [value])
+  return ref
+}
+
+/* ─── typing indicator ─── */
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="block h-[6px] w-[6px] rounded-full bg-muted-foreground/40 animate-bounce"
+          style={{ animationDelay: `${i * 150}ms`, animationDuration: '1s' }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/* ─── message row ─── */
+
+function MessageRow({
+  role,
+  text,
+  isLast,
+  onRegenerate,
+  canRegenerate,
+}: {
+  role: string
+  text: string
+  isLast: boolean
+  onRegenerate?: () => void
+  canRegenerate: boolean
+}) {
+  const isUser = role === 'user'
+
+  return (
+    <div className={`group/row w-full py-5 ${isUser ? '' : ''}`}>
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className="flex gap-4">
+          {/* Avatar */}
+          <div className="flex-shrink-0 pt-0.5">
+            <div
+              className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                isUser
+                  ? 'bg-foreground text-background'
+                  : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+              }`}
+            >
+              {isUser ? (
+                <User className="h-3.5 w-3.5" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" />
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 text-sm font-semibold text-foreground">
+              {isUser ? 'You' : 'Nexus AI'}
+            </div>
+            {isUser ? (
+              <div className="whitespace-pre-wrap text-[0.9375rem] leading-7 text-foreground">
+                {text}
+              </div>
+            ) : (
+              <div className="text-[0.9375rem] text-foreground">
+                <MarkdownContent content={text} />
+              </div>
+            )}
+
+            {/* Actions — visible on hover */}
+            {!isUser && text && (
+              <div className="mt-2 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity duration-150">
+                <CopyButton text={text} />
+                {isLast && canRegenerate && onRegenerate && (
+                  <button
+                    onClick={onRegenerate}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Regenerate
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════
+   MAIN CHAT PAGE
+   ═══════════════════════════════════════════ */
 
 export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params)
   const [input, setInput] = useState('')
-  const { messages, sendMessage, status, regenerate } = useChat({
+
+  const { messages, sendMessage, status, regenerate, stop } = useChat({
     api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
     body: { workspaceId },
   })
 
   const isLoading = status === 'streaming' || status === 'submitted'
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useAutoResize(input)
+
+  // Auto-scroll: only scroll if user is near the bottom
+  const shouldAutoScroll = useRef(true)
+
+  const handleScroll = useCallback(() => {
+    const el = scrollAreaRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    shouldAutoScroll.current = scrollHeight - scrollTop - clientHeight < 120
+  }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (shouldAutoScroll.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages, isLoading])
 
   const handleSend = async () => {
     const text = input.trim()
     if (!text || isLoading) return
+    console.log(`[Chat UI] User submitting message: "${text}"`)
     setInput('')
+    shouldAutoScroll.current = true
     try {
       await sendMessage({ text }, { body: { workspaceId } })
+      console.log(`[Chat UI] sendMessage completed for workspaceId: "${workspaceId}"`)
     } catch (err: any) {
       console.error('[Chat UI] sendMessage error:', err)
       toast.error(err?.message || 'Failed to send message')
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success('Message copied to clipboard')
-  }
+  const showThinking =
+    isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user'
 
   return (
-    <div className="relative flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-        <div className="max-w-3xl mx-auto w-full px-4 py-6 my-auto">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground my-12">
-              <div className="flex h-20 w-20 items-center justify-center mb-6">
-                <img src="/ai-magic-icon.webp" alt="AI Magic" className="h-full w-full object-contain drop-shadow-[0_8px_16px_rgba(99,102,241,0.3)]" />
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      {/* ── Scrollable message area ── */}
+      <div
+        ref={scrollAreaRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overscroll-contain"
+      >
+        {messages.length === 0 ? (
+          /* ── Empty state ── */
+          <div className="flex h-full items-center justify-center">
+            <div className="flex flex-col items-center gap-4 px-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
+                <Bot className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-2xl font-semibold mb-2 text-foreground">How can I help you today?</h3>
-              <p className="text-sm max-w-sm">
-                Ask me questions about your workspace documents or instruct me to use tools like creating tasks.
-              </p>
+              <div>
+                <h2 className="text-xl font-semibold text-foreground">
+                  How can I help you today?
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">
+                  Ask questions about your workspace documents or instruct me to perform tasks.
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              {messages.map((m) => {
-                const textContent = getMessageText(m)
-                return (
-                  <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'} className="max-w-full">
-                    <MessageAvatar>
-                      <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
-                        <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-indigo-400" />}</AvatarFallback>
-                      </Avatar>
-                    </MessageAvatar>
-                    <MessageContent>
-                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white border-0 shadow-none' : 'bg-muted/80 text-foreground border-0 shadow-none'}>
-                        <BubbleContent className="border-0 shadow-none">
-                          {m.role === 'user' ? (
-                            <div className="whitespace-pre-wrap text-[15px]">{textContent}</div>
-                          ) : (
-                            <div className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  code({ node, inline, className, children, ...props }: any) {
-                                    const match = /language-(\w+)/.exec(className || '')
-                                    return !inline && match ? (
-                                      <SyntaxHighlighter
-                                        {...props}
-                                        style={vscDarkPlus}
-                                        language={match[1]}
-                                        PreTag="div"
-                                        className="rounded-xl my-4 overflow-hidden border border-border"
-                                      >
-                                        {String(children).replace(/\n$/, '')}
-                                      </SyntaxHighlighter>
-                                    ) : (
-                                      <code {...props} className={`${className} bg-primary/20 px-1.5 py-0.5 rounded-md text-[13px] font-mono`}>
-                                        {children}
-                                      </code>
-                                    )
-                                  }
-                                }}
-                              >
-                                {textContent}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                        </BubbleContent>
-                      </Bubble>
-                      
-                      <MessageFooter>
-                        <div className="flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => copyToClipboard(textContent)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                          {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => regenerate()}>
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </MessageFooter>
-                    </MessageContent>
-                  </Message>
-                )
-              })}
-              
-              {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                <Message align="start">
-                  <MessageAvatar>
-                    <Avatar className="h-8 w-8 border bg-indigo-500/10 border-indigo-500/20">
-                      <AvatarFallback><Bot className="h-4 w-4 text-indigo-400" /></AvatarFallback>
-                    </Avatar>
-                  </MessageAvatar>
-                  <MessageContent>
-                    <Bubble variant="muted" className="bg-muted/50 border border-border/50">
-                      <BubbleContent className="flex items-center gap-3 py-3">
-                        <div className="flex gap-1">
-                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                      </BubbleContent>
-                    </Bubble>
-                  </MessageContent>
-                </Message>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* ── Messages ── */
+          <div className="pb-4">
+            {messages.map((m, idx) => {
+              const text = getMessageText(m)
+              if (!text && m.role !== 'user') return null
+              return (
+                <MessageRow
+                  key={m.id}
+                  role={m.role}
+                  text={text}
+                  isLast={idx === messages.length - 1}
+                  onRegenerate={regenerate}
+                  canRegenerate={!isLoading}
+                />
+              )
+            })}
+
+            {showThinking && (
+              <div className="w-full py-5">
+                <div className="mx-auto max-w-3xl px-4 sm:px-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 pt-0.5">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                        <Bot className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm font-semibold text-foreground">Nexus AI</div>
+                      <TypingIndicator />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+        )}
       </div>
-      
-      {/* Fixed Message Input Panel */}
-      <div className="sticky bottom-0 left-0 w-full shrink-0 bg-background/80 backdrop-blur-2xl border-t border-border/40 pt-4 pb-5 px-4 z-20">
-        <div className="max-w-3xl mx-auto w-full">
-          <div className="relative flex w-full items-center bg-background/60 backdrop-blur-2xl border border-border/80 shadow-[0_4px_24px_rgba(0,0,0,0.12)] rounded-[20px] p-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500/50 focus-within:bg-background/80">
+
+      {/* ── Fixed input panel ── */}
+      <div className="shrink-0 border-t border-border/50 bg-background">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-3">
+          <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-muted/30 px-4 py-2 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/50 focus-within:shadow-md focus-within:shadow-indigo-500/5">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -197,24 +418,39 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
                   handleSend()
                 }
               }}
-              placeholder="Message Nexus AI..."
-              className="flex-1 bg-transparent border-0 focus-visible:ring-0 shadow-none text-[15px] px-3 py-2.5 min-h-[44px] max-h-48 resize-none placeholder:text-muted-foreground/60 outline-none w-full"
+              placeholder="Message Nexus AI…"
+              className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
               disabled={isLoading}
               rows={1}
+              style={{ minHeight: '24px', maxHeight: '200px' }}
             />
-            <Button
-              type="button"
-              onClick={handleSend}
-              size="icon"
-              disabled={isLoading || !input.trim()}
-              className="h-9 w-9 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground/50 mb-0.5 self-end"
-            >
-              {isLoading ? <Spinner className="h-4 w-4 text-inherit" /> : <Send className="h-4 w-4" />}
-              <span className="sr-only">Send</span>
-            </Button>
+
+            {isLoading ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => stop?.()}
+                className="h-8 w-8 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                aria-label="Stop generating"
+              >
+                <Square className="h-4 w-4 fill-current" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="icon"
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="h-8 w-8 shrink-0 rounded-xl bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 disabled:bg-muted disabled:text-muted-foreground transition-all"
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          <p className="text-center text-[11px] text-muted-foreground/60 mt-2 font-medium">
-            Nexus AI can make mistakes. Consider verifying important information.
+          <p className="mt-2 text-center text-[11px] text-muted-foreground/50">
+            Nexus AI can make mistakes. Verify important information.
           </p>
         </div>
       </div>
