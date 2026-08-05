@@ -18,21 +18,26 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { toast } from 'sonner'
 
+function getMessageText(m: any): string {
+  if (typeof m.content === 'string' && m.content) return m.content
+  if (Array.isArray(m.parts)) {
+    return m.parts
+      .filter((p: any) => p.type === 'text' && typeof p.text === 'string')
+      .map((p: any) => p.text)
+      .join('')
+  }
+  return ''
+}
+
 export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params)
   const [input, setInput] = useState('')
-  const { messages, append, isLoading, reload } = useChat({
+  const { messages, sendMessage, status, regenerate } = useChat({
     api: '/api/chat',
     body: { workspaceId },
-    onResponse: (response) => {
-      console.log('[Chat UI] Got response status:', response.status)
-    },
-    onError: (error) => {
-      console.error('[Chat UI] Chat error:', error)
-      toast.error(error?.message || 'Chat request failed')
-    }
   })
 
+  const isLoading = status === 'streaming' || status === 'submitted'
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -43,7 +48,12 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
     const text = input.trim()
     if (!text || isLoading) return
     setInput('')
-    await append({ role: 'user', content: text })
+    try {
+      await sendMessage({ text })
+    } catch (err: any) {
+      console.error('[Chat UI] sendMessage error:', err)
+      toast.error(err?.message || 'Failed to send message')
+    }
   }
 
   const copyToClipboard = (text: string) => {
@@ -67,65 +77,68 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
             </div>
           ) : (
             <div className="flex flex-col gap-6">
-              {messages.map((m) => (
-                <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'} className="max-w-full">
-                  <MessageAvatar>
-                    <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
-                      <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-indigo-400" />}</AvatarFallback>
-                    </Avatar>
-                  </MessageAvatar>
-                  <MessageContent>
-                    <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-muted/50 border border-border/50 shadow-sm'}>
-                      <BubbleContent>
-                        {m.role === 'user' ? (
-                          <div className="whitespace-pre-wrap text-[15px]">{m.content}</div>
-                        ) : (
-                          <div className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                code({ node, inline, className, children, ...props }: any) {
-                                  const match = /language-(\w+)/.exec(className || '')
-                                  return !inline && match ? (
-                                    <SyntaxHighlighter
-                                      {...props}
-                                      style={vscDarkPlus}
-                                      language={match[1]}
-                                      PreTag="div"
-                                      className="rounded-xl my-4 overflow-hidden border border-border"
-                                    >
-                                      {String(children).replace(/\n$/, '')}
-                                    </SyntaxHighlighter>
-                                  ) : (
-                                    <code {...props} className={`${className} bg-primary/20 px-1.5 py-0.5 rounded-md text-[13px] font-mono`}>
-                                      {children}
-                                    </code>
-                                  )
-                                }
-                              }}
-                            >
-                              {m.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-                      </BubbleContent>
-                    </Bubble>
-                    
-                    <MessageFooter>
-                      <div className="flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => copyToClipboard(m.content)}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => reload()}>
-                            <RefreshCw className="h-3.5 w-3.5" />
+              {messages.map((m) => {
+                const textContent = getMessageText(m)
+                return (
+                  <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'} className="max-w-full">
+                    <MessageAvatar>
+                      <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
+                        <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-indigo-400" />}</AvatarFallback>
+                      </Avatar>
+                    </MessageAvatar>
+                    <MessageContent>
+                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'} className={m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-muted/50 border border-border/50 shadow-sm'}>
+                        <BubbleContent>
+                          {m.role === 'user' ? (
+                            <div className="whitespace-pre-wrap text-[15px]">{textContent}</div>
+                          ) : (
+                            <div className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({ node, inline, className, children, ...props }: any) {
+                                    const match = /language-(\w+)/.exec(className || '')
+                                    return !inline && match ? (
+                                      <SyntaxHighlighter
+                                        {...props}
+                                        style={vscDarkPlus}
+                                        language={match[1]}
+                                        PreTag="div"
+                                        className="rounded-xl my-4 overflow-hidden border border-border"
+                                      >
+                                        {String(children).replace(/\n$/, '')}
+                                      </SyntaxHighlighter>
+                                    ) : (
+                                      <code {...props} className={`${className} bg-primary/20 px-1.5 py-0.5 rounded-md text-[13px] font-mono`}>
+                                        {children}
+                                      </code>
+                                    )
+                                  }
+                                }}
+                              >
+                                {textContent}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                        </BubbleContent>
+                      </Bubble>
+                      
+                      <MessageFooter>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => copyToClipboard(textContent)}>
+                            <Copy className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    </MessageFooter>
-                  </MessageContent>
-                </Message>
-              ))}
+                          {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => regenerate()}>
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </MessageFooter>
+                    </MessageContent>
+                  </Message>
+                )
+              })}
               
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <Message align="start">
