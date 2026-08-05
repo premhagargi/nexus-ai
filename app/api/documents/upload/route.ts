@@ -86,14 +86,12 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log(`[DocUpload] Created document record ${document.id}. Launching background process...`)
+    console.log(`[DocUpload] Created document record ${document.id}. Processing text extraction & vector embeddings synchronously...`)
 
-    // Launch background text extraction & vector embedding process
-    processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
-      console.error(`[DocUpload] Background process error for document ${document.id}:`, err)
-    })
+    // Process text extraction & vector embedding synchronously
+    await processDocument(document.id, uploadData.path, workspaceId, file.name)
 
-    return NextResponse.json({ success: true, documentId: document.id })
+    return NextResponse.json({ success: true, documentId: document.id, status: 'COMPLETED' })
   } catch (error: any) {
     console.error('[DocUpload] POST Route Handler Error:', error)
     return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })
@@ -239,5 +237,7 @@ async function processDocument(documentId: string, storagePath: string, workspac
         errorMessage
       }
     })
+
+    throw new Error(errorMessage)
   }
 }
