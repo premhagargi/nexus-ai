@@ -497,10 +497,10 @@ function ChatInterface({
         )}
       </div>
 
-      {/* ── Fixed input panel ── */}
-      <div className="shrink-0 border-t border-border/50 bg-background -mb-6 -mx-6 px-6 pt-2 pb-2">
+      {/* ── Fixed input panel (ChatGPT style glassmorphism) ── */}
+      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-xl -mb-6 -mx-6 px-6 pt-2.5 pb-3 transition-all">
         <div className="mx-auto max-w-3xl">
-          <div className="relative flex items-end gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/50 focus-within:shadow-md focus-within:shadow-indigo-500/5">
+          <div className="relative flex items-end gap-2 rounded-xl border border-border/60 bg-muted/40 backdrop-blur-sm px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-md focus-within:shadow-indigo-500/5">
             <textarea
               ref={textareaRef}
               value={input}
