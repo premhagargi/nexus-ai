@@ -2,6 +2,16 @@ import prisma from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { UploadDocumentButton } from './upload-button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment"
+import { FileText, Trash } from "lucide-react"
 
 export default async function DocumentsPage({
   params,
@@ -27,7 +37,7 @@ export default async function DocumentsPage({
         <UploadDocumentButton workspaceId={workspaceId} />
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-w-4xl">
         {documents.length === 0 ? (
           <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
             <CardTitle className="mb-2">No documents yet</CardTitle>
@@ -36,26 +46,33 @@ export default async function DocumentsPage({
             </CardDescription>
           </Card>
         ) : (
-          documents.map(doc => (
-            <Card key={doc.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="font-medium">{doc.filename}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div>
-                  <Badge variant={
-                    doc.status === 'COMPLETED' ? 'default' :
-                    doc.status === 'FAILED' ? 'destructive' : 'secondary'
-                  }>
-                    {doc.status}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <div className="flex flex-col gap-3">
+            {documents.map(doc => {
+              let state: "idle" | "uploading" | "processing" | "error" | "done" = "done"
+              if (doc.status === 'PENDING') state = "uploading"
+              if (doc.status === 'PROCESSING') state = "processing"
+              if (doc.status === 'FAILED') state = "error"
+
+              return (
+                <Attachment key={doc.id} state={state} className="w-full max-w-full">
+                  <AttachmentMedia>
+                    <FileText className="h-5 w-5" />
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle>{doc.filename}</AttachmentTitle>
+                    <AttachmentDescription>
+                      {state === 'error' ? 'Failed to process' : new Date(doc.createdAt).toLocaleDateString()}
+                    </AttachmentDescription>
+                  </AttachmentContent>
+                  <AttachmentActions>
+                    <AttachmentAction aria-label={`Delete ${doc.filename}`}>
+                      <Trash className="h-4 w-4" />
+                    </AttachmentAction>
+                  </AttachmentActions>
+                </Attachment>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>

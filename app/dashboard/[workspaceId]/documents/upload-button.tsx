@@ -1,31 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Upload } from 'lucide-react'
+import { Upload, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment"
 
 export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!selectedFile) return
+    
     setUploading(true)
     
     try {
-      const formData = new FormData(e.currentTarget)
-      const file = formData.get('file') as File
-      
-      if (!file || file.size === 0) {
-        throw new Error('Please select a file')
-      }
-
+      const formData = new FormData()
+      formData.append('file', selectedFile)
       formData.append('workspaceId', workspaceId)
 
       const res = await fetch(`/api/documents/upload`, {
@@ -40,6 +48,7 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
 
       toast.success('Document uploaded and processing started!')
       setOpen(false)
+      setSelectedFile(null)
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload document')
@@ -48,9 +57,27 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0])
+    } else {
+      setSelectedFile(null)
+    }
+  }
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
+    <Dialog open={open} onOpenChange={(val) => {
+      setOpen(val)
+      if (!val) setSelectedFile(null)
+    }}>
+      <DialogTrigger asChild>
         <Button>
           <Upload className="mr-2 h-4 w-4" />
           Upload Document
@@ -64,11 +91,45 @@ export function UploadDocumentButton({ workspaceId }: { workspaceId: string }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="file">File</Label>
-            <Input id="file" name="file" type="file" accept=".pdf,.docx,.txt" required disabled={uploading} />
+          <div className="space-y-4">
+            <div className={selectedFile ? "hidden" : "block"}>
+              <Label htmlFor="file" className="sr-only">File</Label>
+              <Input 
+                id="file" 
+                name="file" 
+                type="file" 
+                accept=".pdf,.docx,.txt" 
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                disabled={uploading} 
+              />
+            </div>
+            
+            {selectedFile && (
+              <Attachment state={uploading ? "uploading" : "idle"} className="w-full">
+                <AttachmentMedia>
+                  <FileText className="h-5 w-5" />
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{selectedFile.name}</AttachmentTitle>
+                  <AttachmentDescription>
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </AttachmentDescription>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction 
+                    type="button" 
+                    aria-label="Remove file" 
+                    onClick={handleRemoveFile}
+                    disabled={uploading}
+                  >
+                    <X className="h-4 w-4" />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
+            )}
           </div>
-          <Button type="submit" disabled={uploading} className="w-full">
+          <Button type="submit" disabled={uploading || !selectedFile} className="w-full">
             {uploading ? 'Uploading...' : 'Upload & Process'}
           </Button>
         </form>
