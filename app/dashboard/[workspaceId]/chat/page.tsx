@@ -4,6 +4,7 @@
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Send, Bot, User, Copy, Check, RefreshCw, Square, Trash2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { useEffect, useRef, use, useState, useCallback, useLayoutEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -420,7 +421,11 @@ function ChatInterface({
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-40"
               aria-label="Clear chat history"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              {clearing ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
               {clearing ? 'Clearing…' : 'Clear chat'}
             </button>
           </div>
