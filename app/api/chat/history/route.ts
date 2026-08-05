@@ -8,12 +8,18 @@ async function authCheck(workspaceId: string) {
   const session = await getSession()
   if (!session?.userId) return { error: 'Unauthorized', status: 401 }
 
-  const membership = await prisma.membership.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId: session.userId } },
-  })
-  if (!membership) return { error: 'Unauthorized', status: 401 }
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: session.userId } },
+    })
+    if (!membership) return { error: 'Unauthorized', status: 401 }
 
-  return { userId: session.userId }
+    return { userId: session.userId }
+  } catch (err: any) {
+    const dbError = err?.code === 'P1001' ? 'Database unavailable' : err?.message
+    console.error('[History API] Auth check failed:', dbError)
+    return { error: dbError || 'Database error', status: 503 }
+  }
 }
 
 /* ────────────────────────────────────────────
@@ -29,31 +35,43 @@ export async function GET(req: NextRequest) {
     const auth = await authCheck(workspaceId)
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const conversation = await prisma.conversation.findFirst({
-      where: { workspaceId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 100,
+    try {
+      const conversation = await prisma.conversation.findFirst({
+        where: { workspaceId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+            take: 100,
+          },
         },
-      },
-      orderBy: { updatedAt: 'desc' },
-    })
+        orderBy: { updatedAt: 'desc' },
+      })
 
-    if (!conversation) return NextResponse.json({ messages: [] })
+      if (!conversation) {
+        console.log('[History API] No conversation found for workspace:', workspaceId)
+        return NextResponse.json({ messages: [] })
+      }
 
-    // Return in format useChat initialMessages expects:
-    // { id, role, parts: [{type:'text', text}], content }
-    const messages = conversation.messages
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .map((m) => ({
-        id: m.id,
-        role: m.role,
-        parts: [{ type: 'text', text: m.content }],
-        content: m.content,
-      }))
+      // Return in format useChat initialMessages expects:
+      // { id, role, parts: [{type:'text', text}], content }
+      const messages = conversation.messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({
+          id: m.id,
+          role: m.role,
+          parts: [{ type: 'text', text: m.content }],
+          content: m.content,
+        }))
 
-    return NextResponse.json({ messages, conversationId: conversation.id })
+      console.log('[History API] Loaded', messages.length, 'messages for workspace:', workspaceId)
+      return NextResponse.json({ messages, conversationId: conversation.id })
+    } catch (dbErr: any) {
+      const isConnError = dbErr?.code === 'P1001'
+      const errMsg = isConnError ? 'Database connection error' : dbErr?.message || 'Query failed'
+      console.error('[History API] Query error:', errMsg)
+      // Return empty messages instead of crashing
+      return NextResponse.json({ messages: [] }, { status: isConnError ? 503 : 500 })
+    }
   } catch (e: any) {
     console.error('[History API] GET error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })

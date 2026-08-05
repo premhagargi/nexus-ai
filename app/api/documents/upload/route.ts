@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
-import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai'
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
-import { TaskType } from '@google/generative-ai'
 import mammoth from 'mammoth'
 // @ts-ignore
 import pdfParse from 'pdf-parse/lib/pdf-parse.js'
+import { createDocumentChunks, embedTexts, generateFallbackEmbedding } from '@/lib/rag'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 minutes for serverless processing
@@ -98,16 +96,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function generateFallbackEmbedding(text: string, dimensions: number = 768): number[] {
-  const vector = new Array(dimensions).fill(0)
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i)
-    vector[i % dimensions] = (vector[i % dimensions] + charCode / 255.0) % 2.0 - 1.0
-  }
-  const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0)) || 1
-  return vector.map(val => val / magnitude)
-}
-
 async function processDocument(documentId: string, storagePath: string, workspaceId: string, filename: string) {
   console.log(`[DocUpload] Processing started for documentId=${documentId}, filename="${filename}"`)
   try {
@@ -157,88 +145,52 @@ async function processDocument(documentId: string, storagePath: string, workspac
 
     console.log(`[DocUpload] Extracted ${text.length} characters from "${filename}". Splitting text...`)
 
-    // Recursive text splitting
-    const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 200,
-    })
+    const chunks = await createDocumentChunks(text, filename, documentId, ext)
+    console.log(`[DocUpload] Text split into ${chunks.length} chunk(s).`)
 
-    const docs = await splitter.createDocuments([text], [{ source: filename }])
-    console.log(`[DocUpload] Text split into ${docs.length} chunk(s).`)
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
+    const texts = chunks.map((chunk) => chunk.content)
+    const vectors = await embedTexts(texts, apiKey)
 
-    // Embeddings Setup
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-    const embeddings = new GoogleGenerativeAIEmbeddings({
-      model: "gemini-embedding-001",
-      taskType: TaskType.RETRIEVAL_DOCUMENT,
-      outputDimensionality: 768,
-      apiKey,
-    })
-
-    // Batched embedding and insertion
     const BATCH_SIZE = 20
-    const chunks = docs.map(d => d.pageContent)
-
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-      const batch = chunks.slice(i, i + BATCH_SIZE)
-      const batchDocs = docs.slice(i, i + BATCH_SIZE)
+      const batchChunks = chunks.slice(i, i + BATCH_SIZE)
+      const batchVectors = vectors.slice(i, i + BATCH_SIZE)
 
-      let vectors: number[][] = []
-      try {
-        vectors = await embeddings.embedDocuments(batch)
-      } catch (err) {
-        console.warn(`[DocUpload] Batch ${Math.floor(i / BATCH_SIZE) + 1} embedding failed. Retrying in 2 seconds...`, err)
-        await new Promise(r => setTimeout(r, 2000))
-        try {
-          vectors = await embeddings.embedDocuments(batch)
-        } catch (retryErr) {
-          console.warn(`[DocUpload] Embedding API retry failed, switching to fallback vector generator:`, retryErr)
-        }
-      }
-
-      // Insert all chunks from this batch in a transaction
       await prisma.$transaction(
-        batchDocs.map((doc, j) => {
-          let vector = vectors && vectors[j] && Array.isArray(vectors[j]) && vectors[j].length > 0 ? vectors[j] : null
-          if (vector) {
-            console.log(`[DocUpload] Embedding length:`, vector.length)
-            if (vector.length > 768) {
-              vector = vector.slice(0, 768)
-            }
-          } else {
-            vector = generateFallbackEmbedding(doc.pageContent, 768)
+        batchChunks.map((chunk, j) => {
+          let vector = batchVectors[j]
+          if (!vector || !Array.isArray(vector) || vector.length !== 768) {
+            vector = generateFallbackEmbedding(chunk.content)
           }
           const vectorStr = `[${vector.join(',')}]`
-          const metaJson = JSON.stringify(doc.metadata || {})
           return prisma.$executeRawUnsafe(
             `INSERT INTO "DocumentChunk" (id, "workspaceId", "documentId", content, embedding, metadata, "createdAt") VALUES (gen_random_uuid(), $1, $2, $3, $4::vector, $5::jsonb, NOW())`,
             workspaceId,
             documentId,
-            doc.pageContent,
+            chunk.content,
             vectorStr,
-            metaJson
+            JSON.stringify(chunk.metadata),
           )
-        })
+        }),
       )
 
       console.log(`[DocUpload] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1} / ${Math.ceil(chunks.length / BATCH_SIZE)} into vector database.`)
-
       if (i + BATCH_SIZE < chunks.length) {
-        await new Promise(r => setTimeout(r, 300))
+        await new Promise((r) => setTimeout(r, 300))
       }
     }
 
-    // Update document status to COMPLETED
     await prisma.document.update({
       where: { id: documentId },
       data: {
         status: 'COMPLETED',
-        chunkCount: docs.length,
-        errorMessage: null
-      }
+        chunkCount: chunks.length,
+        errorMessage: null,
+      },
     })
 
-    console.log(`[DocUpload] Successfully processed documentId=${documentId} (${docs.length} total chunks).`)
+    console.log(`[DocUpload] Successfully processed documentId=${documentId} (${chunks.length} total chunks).`)
   } catch (error: any) {
     console.error(`[DocUpload] Processing failed for documentId=${documentId}:`, error)
 

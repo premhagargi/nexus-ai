@@ -15,7 +15,9 @@ import { toast } from 'sonner'
 
 function getMessageText(m: any): string {
   if (!m) return ''
-  if (typeof m.content === 'string' && m.content.trim()) return m.content
+  if (typeof m.content === 'string' && m.content.trim()) {
+    return m.content
+  }
   if (typeof m.text === 'string' && m.text.trim()) return m.text
   if (Array.isArray(m.parts) && m.parts.length > 0) {
     const joined = m.parts
@@ -268,15 +270,7 @@ function MessageRow({
             {!isUser && text && (
               <div className="mt-2 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity duration-150">
                 <CopyButton text={text} />
-                {isLast && canRegenerate && onRegenerate && (
-                  <button
-                    onClick={onRegenerate}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Regenerate
-                  </button>
-                )}
+    
               </div>
             )}
           </div>
@@ -334,7 +328,7 @@ function ChatInterface({
   const { messages, sendMessage, status, stop } = useChat({
     api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
     body: { workspaceId },
-    initialMessages,
+    // Don't use initialMessages here — we manually merge below
   })
 
   const isLoading = status === 'streaming' || status === 'submitted'
@@ -342,7 +336,12 @@ function ChatInterface({
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useAutoResize(input)
 
-  // Auto-scroll: only scroll if user is near the bottom
+  // Manually merge initial messages with new messages from useChat
+  const allMessages = [
+    ...initialMessages.filter((m) => m.role && (m.role === 'user' || m.role === 'assistant')),
+    ...messages,
+  ]
+
   const shouldAutoScroll = useRef(true)
 
   const handleScroll = useCallback(() => {
@@ -356,7 +355,7 @@ function ChatInterface({
     if (shouldAutoScroll.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, isLoading])
+  }, [allMessages, isLoading])
 
   const handleSend = async () => {
     const text = input.trim()
@@ -406,12 +405,12 @@ function ChatInterface({
   }
 
   const showThinking =
-    isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user'
+    isLoading && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user'
 
   return (
     <div className="flex h-full flex-col bg-background">
       {/* ── Header with Clear button ── */}
-      {messages.length > 0 && (
+      {allMessages.length > 0 && (
         <div className="shrink-0 flex items-center justify-end px-4 sm:px-6 pt-3 pb-1">
           <div className="mx-auto max-w-3xl w-full flex justify-end">
             <button
@@ -435,7 +434,7 @@ function ChatInterface({
         className="flex-1 overflow-y-auto overscroll-contain scrollbar-none"
         style={{ scrollbarWidth: 'none' } as React.CSSProperties}
       >
-        {messages.length === 0 ? (
+        {allMessages.length === 0 ? (
           /* ── Empty state ── */
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-4 px-4 text-center">
@@ -455,7 +454,7 @@ function ChatInterface({
         ) : (
           /* ── Messages ── */
           <div className="pb-4">
-            {messages.map((m, idx) => {
+            {allMessages.map((m, idx) => {
               const text = getMessageText(m)
               if (!text && m.role !== 'user') return null
               return (
@@ -463,7 +462,7 @@ function ChatInterface({
                   key={m.id}
                   role={m.role}
                   text={text}
-                  isLast={idx === messages.length - 1}
+                  isLast={idx === allMessages.length - 1}
                   onRegenerate={handleRegenerate}
                   canRegenerate={!isLoading}
                 />
@@ -560,17 +559,30 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
 
   const fetchHistory = useCallback(() => {
     setHistoryLoaded(false)
-    fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`)
-      .then((r) => r.json())
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+
+    fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`, {
+      signal: controller.signal,
+    })
+      .then((r) => {
+        clearTimeout(timeoutId)
+        return r.json()
+      })
       .then((data) => {
-        if (data.messages) setInitialMessages(data.messages)
-        else setInitialMessages([])
+        if (data.messages && Array.isArray(data.messages)) {
+          setInitialMessages(data.messages)
+        } else {
+          setInitialMessages([])
+        }
       })
       .catch((err) => {
-        console.error('[Chat UI] Failed to load history:', err)
+        clearTimeout(timeoutId)
         setInitialMessages([])
       })
-      .finally(() => setHistoryLoaded(true))
+      .finally(() => {
+        setHistoryLoaded(true)
+      })
   }, [workspaceId])
 
   useEffect(() => {
