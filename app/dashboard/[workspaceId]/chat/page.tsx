@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Bot, User, Copy, RefreshCw, Loader2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'
+import { Bubble, BubbleContent } from '@/components/ui/bubble'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -52,81 +54,81 @@ export default function ChatPage({ params }: { params: { workspaceId: string } }
             ) : (
               <div className="flex flex-col gap-6 pb-4">
                 {messages.map((m) => (
-                  <div key={m.id} className={`flex gap-4 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {m.role !== 'user' && (
-                      <Avatar className="h-8 w-8 mt-1 border bg-primary/10">
-                        <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+                  <Message key={m.id} align={m.role === 'user' ? 'end' : 'start'}>
+                    <MessageAvatar>
+                      <Avatar className={`h-8 w-8 border ${m.role === 'user' ? 'bg-secondary' : 'bg-primary/10'}`}>
+                        <AvatarFallback>{m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</AvatarFallback>
                       </Avatar>
-                    )}
-                    <div className={`group flex flex-col gap-2 max-w-[80%] ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className={`rounded-xl px-4 py-3 ${
-                        m.role === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted border border-border/50'
-                      }`}>
-                        {m.role === 'user' ? (
-                          <div className="whitespace-pre-wrap text-sm">{m.content}</div>
-                        ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                code({ node, inline, className, children, ...props }: any) {
-                                  const match = /language-(\w+)/.exec(className || '')
-                                  return !inline && match ? (
-                                    <SyntaxHighlighter
-                                      {...props}
-                                      style={vscDarkPlus}
-                                      language={match[1]}
-                                      PreTag="div"
-                                      className="rounded-md my-2"
-                                    >
-                                      {String(children).replace(/\n$/, '')}
-                                    </SyntaxHighlighter>
-                                  ) : (
-                                    <code {...props} className={`${className} bg-primary/20 px-1 py-0.5 rounded text-xs`}>
-                                      {children}
-                                    </code>
-                                  )
-                                }
-                              }}
-                            >
-                              {m.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-                      </div>
+                    </MessageAvatar>
+                    <MessageContent>
+                      <Bubble variant={m.role === 'user' ? 'default' : 'muted'}>
+                        <BubbleContent>
+                          {m.role === 'user' ? (
+                            <div className="whitespace-pre-wrap text-sm">{m.content}</div>
+                          ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({ node, inline, className, children, ...props }: any) {
+                                    const match = /language-(\w+)/.exec(className || '')
+                                    return !inline && match ? (
+                                      <SyntaxHighlighter
+                                        {...props}
+                                        style={vscDarkPlus}
+                                        language={match[1]}
+                                        PreTag="div"
+                                        className="rounded-md my-2"
+                                      >
+                                        {String(children).replace(/\n$/, '')}
+                                      </SyntaxHighlighter>
+                                    ) : (
+                                      <code {...props} className={`${className} bg-primary/20 px-1 py-0.5 rounded text-xs`}>
+                                        {children}
+                                      </code>
+                                    )
+                                  }
+                                }}
+                              >
+                                {m.content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                        </BubbleContent>
+                      </Bubble>
                       
-                      {/* Message Actions */}
-                      <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(m.content)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => reload()}>
-                            <RefreshCw className="h-3 w-3" />
+                      <MessageFooter>
+                        <div className="flex items-center gap-2 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(m.content)}>
+                            <Copy className="h-3 w-3" />
                           </Button>
-                        )}
-                      </div>
-                    </div>
-                    {m.role === 'user' && (
-                      <Avatar className="h-8 w-8 mt-1 border bg-secondary">
-                        <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
+                          {m.role !== 'user' && m.id === messages[messages.length - 1].id && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => reload()}>
+                              <RefreshCw className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </MessageFooter>
+                    </MessageContent>
+                  </Message>
                 ))}
                 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex gap-4 justify-start">
-                    <Avatar className="h-8 w-8 mt-1 border bg-primary/10">
-                      <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
-                    </Avatar>
-                    <div className="rounded-xl px-4 py-3 bg-muted border border-border/50 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Thinking...</span>
-                    </div>
-                  </div>
+                  <Message align="start">
+                    <MessageAvatar>
+                      <Avatar className="h-8 w-8 border bg-primary/10">
+                        <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+                      </Avatar>
+                    </MessageAvatar>
+                    <MessageContent>
+                      <Bubble variant="muted">
+                        <BubbleContent className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Thinking...</span>
+                        </BubbleContent>
+                      </Bubble>
+                    </MessageContent>
+                  </Message>
                 )}
                 <div ref={messagesEndRef} />
               </div>
