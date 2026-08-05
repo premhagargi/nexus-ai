@@ -339,12 +339,13 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
     isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user'
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* ── Scrollable message area ── */}
       <div
         ref={scrollAreaRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overscroll-contain"
+        className="flex-1 overflow-y-auto overscroll-contain scrollbar-none"
+        style={{ scrollbarWidth: 'none' } as React.CSSProperties}
       >
         {messages.length === 0 ? (
           /* ── Empty state ── */
