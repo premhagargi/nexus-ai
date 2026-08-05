@@ -29,6 +29,10 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
+  // DEBUG: trace input state
+  console.log('[Chat] input value:', JSON.stringify(input), '| type:', typeof input, '| isLoading:', isLoading)
+  console.log('[Chat] button disabled:', isLoading || !input?.trim())
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
@@ -149,12 +153,18 @@ export default function ChatPage({ params }: { params: Promise<{ workspaceId: st
           >
             <textarea
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                console.log('[Chat] onChange fired, value:', JSON.stringify(e.target.value))
+                handleInputChange(e)
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
+                  console.log('[Chat] Enter pressed, input:', JSON.stringify(input), '| requesting submit')
                   if (!isLoading && input?.trim()) {
                     formRef.current?.requestSubmit()
+                  } else {
+                    console.warn('[Chat] Enter blocked — isLoading:', isLoading, '| input empty:', !input?.trim())
                   }
                 }
               }}
