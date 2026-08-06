@@ -163,9 +163,10 @@ async function executeTool(
       return 'No documents found to summarize.'
     }
 
-    // 2. Compute fair per-document chunk quota to prevent 1 large doc from monopolizing the limit
-    const MAX_TOTAL_CHUNKS = 200
-    const perDocQuota = Math.max(10, Math.floor(MAX_TOTAL_CHUNKS / documents.length))
+    // 2. Compute fair per-document chunk quota to prevent exceeding the 8k token limit of Cerebras.
+    // 24 chunks * 1100 chars = ~26,400 chars (approx 6.5k tokens).
+    const MAX_TOTAL_CHUNKS = 24
+    const perDocQuota = Math.max(2, Math.floor(MAX_TOTAL_CHUNKS / documents.length))
 
     console.log(`[AI Tool] Found ${documents.length} document(s). Sampling up to ${perDocQuota} chunks per document.`)
 
