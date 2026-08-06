@@ -231,7 +231,7 @@ Output Format:
           onToken(delta)
         }
         // Artificially slow down Cerebras to human-readable speeds (also prevents React freezing)
-        await new Promise(r => setTimeout(r, 15))
+        await new Promise(r => setTimeout(r, 35))
       }
     }
 
@@ -427,7 +427,7 @@ export async function POST(req: NextRequest) {
                 assistantText += delta.content
                 controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: delta.content }))
                 // Artificially slow down Cerebras to human-readable speeds
-                await new Promise(r => setTimeout(r, 15))
+                await new Promise(r => setTimeout(r, 35))
               }
 
               /* Accumulate tool call deltas */
@@ -505,7 +505,7 @@ export async function POST(req: NextRequest) {
                     followUpText += text
                     controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
                     // Artificially slow down Cerebras to human-readable speeds
-                    await new Promise(r => setTimeout(r, 15))
+                    await new Promise(r => setTimeout(r, 35))
                   }
                 }
                 if (followUpStarted) {
