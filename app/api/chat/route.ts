@@ -199,14 +199,19 @@ async function executeTool(
       .map(({ name, texts }) => `### Document: ${name}\n${texts.join('\n')}`)
       .join('\n\n---\n\n')
 
+    const docNamesList = Array.from(docMap.values()).map(d => `- ${d.name}`).join('\n')
+
     console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${totalChunkCount} total chunks with streaming...`)
 
     const summaryRespStream = await cerebras.chat.completions.create({
       messages: [{
         role: 'user',
-        content: `You are summarizing a workspace knowledge base containing ${docMap.size} documents.
+        content: `You are summarizing a workspace knowledge base containing exactly ${docMap.size} documents.
 
-CRITICAL INSTRUCTION: You MUST write a distinct, clear summary section for EVERY single document listed below. Do NOT omit or skip any document.
+The documents are:
+${docNamesList}
+
+CRITICAL INSTRUCTION: You MUST write a distinct, clear summary section for EVERY SINGLE DOCUMENT listed above. Do NOT omit or skip any document. If there are 3 documents, you must have 3 distinct sections.
 
 Workspace Documents Content:
 ${docsText}
@@ -345,30 +350,28 @@ export async function POST(req: NextRequest) {
 
     let searchTarget = queryText
 
-    // Coreference Resolution: If query is short and contains pronouns, rewrite it using history for RAG
-    if (messages.length > 1 && queryText.split(' ').length < 10) {
-      const containsPronoun = /\b(it|they|them|he|she|this|that|these|those)\b/i.test(queryText)
-      if (containsPronoun) {
-        console.log(`[Chat API] Resolving coreference for query: "${queryText}"`)
-        const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
-        try {
-          const rewriteResp = await cerebras.chat.completions.create({
-            model: CEREBRAS_MODEL,
-            messages: [
-              { role: 'system', content: 'Rewrite the final user question into a standalone search query by resolving pronouns (it, they, this) using the conversation history. Reply ONLY with the standalone query. Do not add quotes or explanations.' },
-              { role: 'user', content: recentHistory }
-            ],
-            max_completion_tokens: 50,
-            temperature: 0,
-          })
-          const rewritten = (rewriteResp.choices?.[0]?.message?.content || '').trim()
-          if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
-            searchTarget = rewritten
-            console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
-          }
-        } catch (e: any) {
-          console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
+    // Conversational Query Reformulation & Typo Correction
+    // Always intercept short queries (<15 words) to fix typos (e.g. wjhat), fix spacing (e.g. marketmapmaker), and resolve pronouns (e.g. it, they)
+    if (queryText.split(' ').length < 15) {
+      console.log(`[Chat API] Reformulating query for RAG: "${queryText}"`)
+      const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
+      try {
+        const rewriteResp = await cerebras.chat.completions.create({
+          model: CEREBRAS_MODEL,
+          messages: [
+            { role: 'system', content: 'You are a search query optimizer. Your job is to rewrite the final user question into a clean, standalone search query for a vector database. Resolve any pronouns (it, they, this) using the conversation history. Fix any spelling mistakes (e.g. "wjhat" -> "what") and separate concatenated words (e.g. "marketmapmaker" -> "market map maker"). Reply ONLY with the standalone search query. Do not add quotes or explanations.' },
+            { role: 'user', content: recentHistory || queryText }
+          ],
+          max_completion_tokens: 50,
+          temperature: 0,
+        })
+        const rewritten = (rewriteResp.choices?.[0]?.message?.content || '').trim()
+        if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
+          searchTarget = rewritten
+          console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
         }
+      } catch (e: any) {
+        console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
       }
     }
 
