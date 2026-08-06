@@ -72,11 +72,11 @@ const CEREBRAS_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'save_task',
-      description: 'Creates a task in the current workspace. CRITICAL REQUIREMENT: Only call this tool if the user provided SPECIFIC task details, an action item, or a topic (e.g. "create a task to review the Q3 budget"). DO NOT call this tool if the user\'s request is vague or missing task details (e.g. "can you create a task for me?"). If details are missing, ask the user to specify what task they want created instead of calling this tool with generic titles like "Create a new task". Fix any typos in the title.',
+      description: 'Creates a task in the current workspace. DYNAMIC REQUIREMENT: Only call this tool if the user provided a SPECIFIC task action item, title, or details (e.g. "create a task to review the Q3 budget", "add task: fix auth bug"). DO NOT call this tool if the user is asking to create/add/make a task without providing the task topic (e.g. "can you create a task for me?", "add a task please", "i want to make a task"). In those vague cases, respond directly in text asking what task to create. The title MUST describe actual work to be done, never a meta-request.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'A clean, corrected, human-readable task title inferred from the user\'s explicit request. Do not use generic placeholders like "Create a new task".' },
+          title: { type: 'string', description: 'The specific, clean, action-oriented title of the task describing actual work to be done (e.g. "Review Q3 budget", "Fix auth rate limit bug"). Never use generic meta-placeholders like "Create a new task".' },
           description: { type: 'string', description: 'A short optional description with more context about the task.' },
         },
         required: ['title'],
@@ -93,6 +93,27 @@ const CEREBRAS_TOOLS = [
   },
 ]
 
+function isGenericTaskTitle(title: string): boolean {
+  if (!title || typeof title !== 'string') return true
+  const cleaned = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim()
+  if (!cleaned) return true
+
+  // Set of meta/filler words commonly present in meta requests asking to create/add a task
+  const META_WORDS = new Set([
+    'can', 'you', 'could', 'would', 'please', 'create', 'add', 'make', 'setup', 'set', 'up',
+    'new', 'a', 'an', 'the', 'task', 'tasks', 'for', 'me', 'my', 'i', 'want', 'need',
+    'to', 'on', 'board', 'list', 'item', 'something', 'anything', 'like', 'how', 'user',
+    'requested', 'creation', 'without', 'further', 'details', 'untitled', 'put', 'this',
+    'in', 'here', 'there', 'just', 'some', 'action'
+  ])
+
+  const words = cleaned.split(/\s+/).filter(Boolean)
+  const contentWords = words.filter((w) => !META_WORDS.has(w))
+
+  // If there are no non-meta content words, it's a generic meta request with zero task details
+  return contentWords.length === 0
+}
+
 /* ─── Execute a tool call ─── */
 async function executeTool(
   name: string,
@@ -105,22 +126,8 @@ async function executeTool(
     const title = String(rawTitle).trim()
     const description = args?.description ? String(args.description).trim() : null
 
-    const genericPlaceholders = [
-      'create a new task',
-      'create a task',
-      'new task',
-      'task',
-      'create task',
-      'untitled task',
-      'user requested a task creation',
-      'user requested task',
-    ]
-
-    const lowerTitle = title.toLowerCase()
-    const isGeneric = genericPlaceholders.some((ph) => lowerTitle === ph || lowerTitle.startsWith(ph + ' without') || lowerTitle.startsWith(ph + ' with'))
-
-    if (!title || isGeneric) {
-      console.warn(`[AI Tool] Rejected generic 'save_task' attempt with title: "${title}"`)
+    if (isGenericTaskTitle(title)) {
+      console.warn(`[AI Tool] Dynamically rejected generic/meta 'save_task' attempt with title: "${title}"`)
       return 'Task creation was not completed because no specific task title or topic was provided. Please ask the user: "What specific task would you like me to create? Please provide a title or topic."'
     }
 

@@ -479,9 +479,10 @@ export function buildSystemPrompt(context: string) {
 - Answer conversationally and be concise unless the user asks for more detail.
 
 Tool Usage & Task Creation Rules:
-- ONLY call the save_task tool when the user provides specific task details, a topic, or an action item to save (e.g., "create a task to review the Q3 budget").
-- DO NOT call save_task if the user makes a generic request without specifying what task to create (e.g., "can you create a task for me?"). Instead, ask the user to specify the task title or details.
-- NEVER generate placeholder task titles like "Create a new task", "New Task", "Task", or "User requested a task".
+- ONLY call the save_task tool when the user provides specific task details, a topic, or an action item to save (e.g., "create a task to review the Q3 budget", "add task: fix auth bug").
+- DO NOT call save_task if the user is asking to create/add/make a task WITHOUT specifying the task content or topic (e.g., "can you create a task for me?", "add a task please", "i want to make a task", "put a task on my board").
+- In all vague cases, respond directly in natural language asking the user: "What specific task would you like me to create? Please provide a title or topic."
+- NEVER call save_task with generic placeholder titles such as "Create a new task", "New Task", "Task", "User requested a task creation", or any phrase that merely restates the request to create a task.
 
 Context:
 ${context}
