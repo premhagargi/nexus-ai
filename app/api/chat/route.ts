@@ -230,6 +230,29 @@ async function saveMessages(workspaceId: string, userText: string, assistantText
   }
 }
 
+function shouldSkipRetrieval(query: string): boolean {
+  if (!query || typeof query !== 'string') return true
+  const cleaned = query.toLowerCase().trim()
+  if (!cleaned) return true
+
+  // 1. Conversational greetings & meta questions
+  if (/^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|who\s+are\s+you|what\s+can\s+you\s+do)[\s!.]*$/i.test(cleaned)) {
+    return true
+  }
+
+  // 2. Task creation requests & tool action triggers
+  if (/(create|add|make|set\s*up|put|save)\s+(a\s+|an\s+|the\s+|new\s+)?(task|action\s+item|todo|reminder)/i.test(cleaned)) {
+    return true
+  }
+
+  // 3. Workspace summarization requests (handled internally by summarize_workspace tool)
+  if (/(summarize|summary|overview)\s+(the\s+|this\s+|all\s+)?(workspace|documents|files)/i.test(cleaned)) {
+    return true
+  }
+
+  return false
+}
+
 /* ════════════════════════════════════════════
    POST /api/chat
    ════════════════════════════════════════════ */
@@ -269,14 +292,18 @@ export async function POST(req: NextRequest) {
     console.log(`[Chat API] Query: "${queryText.substring(0, 100)}${queryText.length > 100 ? '...' : ''}"`)
 
     if (queryText && (lastMessage?.role === 'user' || !lastMessage?.role)) {
-      const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
-      try {
-        console.log(`[Chat API] Starting retrieval for workspace ${workspaceId}...`)
-        const retrieval = await retrieveWorkspaceContext(workspaceId, queryText, googleApiKey)
-        context = retrieval.context
-        console.log(`[Chat API] Retrieval method=${retrieval.method} confidence=${retrieval.confidence.toFixed(2)} chunks=${retrieval.chunks.length}`)
-      } catch (retrievalError: any) {
-        console.error('[Chat API] Retrieval error:', retrievalError?.message || retrievalError)
+      if (shouldSkipRetrieval(queryText)) {
+        console.log(`[Chat API] Fast-path: query "${queryText}" matched tool/conversational pattern. Skipping RAG search.`)
+      } else {
+        const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
+        try {
+          console.log(`[Chat API] Starting retrieval for workspace ${workspaceId}...`)
+          const retrieval = await retrieveWorkspaceContext(workspaceId, queryText, googleApiKey)
+          context = retrieval.context
+          console.log(`[Chat API] Retrieval method=${retrieval.method} confidence=${retrieval.confidence.toFixed(2)} chunks=${retrieval.chunks.length}`)
+        } catch (retrievalError: any) {
+          console.error('[Chat API] Retrieval error:', retrievalError?.message || retrievalError)
+        }
       }
     }
 

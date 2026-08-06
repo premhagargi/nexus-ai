@@ -204,13 +204,13 @@ export function generateQueryVariants(query: string): string[] {
   if (keywordQuery && keywordQuery !== normalized) {
     variants.push(keywordQuery)
   }
-  if (statementQuery && statementQuery !== normalized) {
-    variants.push(statementQuery)
+  // Only add extra statement variants for longer, complex queries (>7 tokens)
+  if (tokens.length > 7) {
+    if (statementQuery && statementQuery !== normalized) {
+      variants.push(statementQuery)
+    }
   }
-  if (keywords.length > 0) {
-    variants.push(keywords.join(' '))
-  }
-  return Array.from(new Set(variants)).slice(0, 4)
+  return Array.from(new Set(variants)).slice(0, 3)
 }
 
 export async function vectorSearchCandidates(
