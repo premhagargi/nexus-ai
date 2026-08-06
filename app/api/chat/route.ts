@@ -222,28 +222,17 @@ Output Format:
     })
 
     let summary = ''
-    let batch = ''
-    let lastEmitTime = Date.now()
 
     for await (const chunk of summaryRespStream) {
       const delta = (chunk.choices?.[0]?.delta as any)?.content || ''
       if (delta) {
         summary += delta
-        batch += delta
-        
-        const now = Date.now()
-        // Batch updates every 50ms to prevent browser freezing from too many ReactMarkdown re-renders
-        if (now - lastEmitTime > 50) {
-          if (onToken) onToken(batch)
-          batch = ''
-          lastEmitTime = now
+        if (onToken) {
+          onToken(delta)
         }
+        // Artificially slow down Cerebras to human-readable speeds (also prevents React freezing)
+        await new Promise(r => setTimeout(r, 15))
       }
-    }
-    
-    // Flush any remaining tokens
-    if (batch && onToken) {
-      onToken(batch)
     }
 
     await prisma.toolExecution.create({
@@ -437,6 +426,8 @@ export async function POST(req: NextRequest) {
                 }
                 assistantText += delta.content
                 controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: delta.content }))
+                // Artificially slow down Cerebras to human-readable speeds
+                await new Promise(r => setTimeout(r, 15))
               }
 
               /* Accumulate tool call deltas */
@@ -513,6 +504,8 @@ export async function POST(req: NextRequest) {
                     }
                     followUpText += text
                     controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
+                    // Artificially slow down Cerebras to human-readable speeds
+                    await new Promise(r => setTimeout(r, 15))
                   }
                 }
                 if (followUpStarted) {
