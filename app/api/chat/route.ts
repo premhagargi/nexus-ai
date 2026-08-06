@@ -87,8 +87,16 @@ const CEREBRAS_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'summarize_workspace',
-      description: 'Reads all uploaded documents and returns an AI-generated summary of the workspace content.',
-      parameters: { type: 'object', properties: {} },
+      description: 'Reads all uploaded documents and returns an AI-generated summary of the workspace content. Can optionally send the summary to Slack.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sendToSlack: {
+            type: 'boolean',
+            description: 'Set to true if the user asks to send the summary to Slack or the ai-tools channel.'
+          }
+        }
+      },
     },
   },
 ]
@@ -112,6 +120,31 @@ function isGenericTaskTitle(title: string): boolean {
 
   // If there are no non-meta content words, it's a generic meta request with zero task details
   return contentWords.length === 0
+}
+
+async function sendToSlackWebhook(summary: string) {
+  const WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+  
+  if (!WEBHOOK_URL) {
+    console.warn('[Slack] SLACK_WEBHOOK_URL is not set in environment variables. Notification skipped.');
+    return;
+  }
+
+  try {
+    const response = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: `*Workspace Summary*\n\n${summary}` }),
+    });
+
+    if (!response.ok) {
+      console.error('[Slack] Failed to send message:', await response.text());
+    } else {
+      console.log(`[Slack] Successfully sent summary to channel.`);
+    }
+  } catch (error) {
+    console.error('[Slack] Network error:', error);
+  }
 }
 
 /* ─── Execute a tool call ─── */
@@ -250,6 +283,11 @@ Output Format:
       },
     })
     console.log(`[AI Tool] 'summarize_workspace' streamed ${summary.length} chars summary for ${docMap.size} documents.`)
+    
+    if (args?.sendToSlack) {
+      sendToSlackWebhook(summary).catch(err => console.error(err));
+    }
+
     return summary
   }
 
