@@ -72,11 +72,11 @@ const CEREBRAS_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'save_task',
-      description: 'Creates a task in the current workspace. IMPORTANT: You must infer the user\'s true intent and write a clean, grammatically correct task title. Fix any typos, autocorrect misspellings (e.g. "mw" → "me", "teh" → "the"), and rephrase into a clear action item. Never use the user\'s raw typo-ridden text verbatim as the title.',
+      description: 'Creates a task in the current workspace. CRITICAL REQUIREMENT: Only call this tool if the user provided SPECIFIC task details, an action item, or a topic (e.g. "create a task to review the Q3 budget"). DO NOT call this tool if the user\'s request is vague or missing task details (e.g. "can you create a task for me?"). If details are missing, ask the user to specify what task they want created instead of calling this tool with generic titles like "Create a new task". Fix any typos in the title.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'A clean, corrected, human-readable task title inferred from the user\'s intent. Fix all typos and spelling mistakes.' },
+          title: { type: 'string', description: 'A clean, corrected, human-readable task title inferred from the user\'s explicit request. Do not use generic placeholders like "Create a new task".' },
           description: { type: 'string', description: 'A short optional description with more context about the task.' },
         },
         required: ['title'],
@@ -101,9 +101,28 @@ async function executeTool(
   cerebras: InstanceType<typeof Cerebras>
 ): Promise<string> {
   if (name === 'save_task') {
-    const rawTitle = args?.title || args?.task || args?.name || 'New Task'
-    const title = String(rawTitle).trim() || 'New Task'
+    const rawTitle = args?.title || args?.task || args?.name || ''
+    const title = String(rawTitle).trim()
     const description = args?.description ? String(args.description).trim() : null
+
+    const genericPlaceholders = [
+      'create a new task',
+      'create a task',
+      'new task',
+      'task',
+      'create task',
+      'untitled task',
+      'user requested a task creation',
+      'user requested task',
+    ]
+
+    const lowerTitle = title.toLowerCase()
+    const isGeneric = genericPlaceholders.some((ph) => lowerTitle === ph || lowerTitle.startsWith(ph + ' without') || lowerTitle.startsWith(ph + ' with'))
+
+    if (!title || isGeneric) {
+      console.warn(`[AI Tool] Rejected generic 'save_task' attempt with title: "${title}"`)
+      return 'Task creation was not completed because no specific task title or topic was provided. Please ask the user: "What specific task would you like me to create? Please provide a title or topic."'
+    }
 
     console.log(`[AI Tool] Executing 'save_task':`, { title, description })
     const task = await prisma.task.create({
