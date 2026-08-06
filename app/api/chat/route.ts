@@ -119,7 +119,8 @@ async function executeTool(
   name: string,
   args: Record<string, any>,
   workspaceId: string,
-  cerebras: InstanceType<typeof Cerebras>
+  cerebras: InstanceType<typeof Cerebras>,
+  onToken?: (text: string) => void
 ): Promise<string> {
   if (name === 'save_task') {
     const rawTitle = args?.title || args?.task || args?.name || ''
@@ -197,9 +198,9 @@ async function executeTool(
       .map(({ name, texts }) => `### Document: ${name}\n${texts.join('\n')}`)
       .join('\n\n---\n\n')
 
-    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${totalChunkCount} total chunks...`)
+    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${totalChunkCount} total chunks with streaming...`)
 
-    const summaryResp = await cerebras.chat.completions.create({
+    const summaryRespStream = await cerebras.chat.completions.create({
       messages: [{
         role: 'user',
         content: `You are summarizing a workspace knowledge base containing ${docMap.size} documents.
@@ -217,9 +218,20 @@ Output Format:
       model: CEREBRAS_MODEL,
       max_completion_tokens: 2048,
       temperature: 0.2,
-      stream: false,
+      stream: true,
     })
-    const summary = (summaryResp as any).choices?.[0]?.message?.content || ''
+
+    let summary = ''
+    for await (const chunk of summaryRespStream) {
+      const delta = (chunk.choices?.[0]?.delta as any)?.content || ''
+      if (delta) {
+        summary += delta
+        if (onToken) {
+          onToken(delta)
+        }
+      }
+    }
+
     await prisma.toolExecution.create({
       data: {
         workspaceId,
@@ -228,7 +240,7 @@ Output Format:
         result: { status: 'success', summaryLength: summary.length, documentCount: docMap.size },
       },
     })
-    console.log(`[AI Tool] 'summarize_workspace' generated ${summary.length} chars summary for ${docMap.size} documents.`)
+    console.log(`[AI Tool] 'summarize_workspace' streamed ${summary.length} chars summary for ${docMap.size} documents.`)
     return summary
   }
 
@@ -439,50 +451,61 @@ export async function POST(req: NextRequest) {
               const toolCallList = Object.values(accToolCalls)
               console.log(`[Chat API] Executing ${toolCallList.length} tool call(s)...`)
 
+              let toolStreamedToUI = false
+
               const toolResults = await Promise.all(
                 toolCallList.map(async (tc) => {
                   let args: Record<string, any> = {}
                   try { args = JSON.parse(tc.function.arguments || '{}') } catch {}
-                  const result = await executeTool(tc.function.name, args, workspaceId, cerebras)
+                  const result = await executeTool(tc.function.name, args, workspaceId, cerebras, (deltaToken) => {
+                    toolStreamedToUI = true
+                    if (!textStarted) {
+                      controller.enqueue(sseChunk({ type: 'text-start', id: textPartId }))
+                      textStarted = true
+                    }
+                    assistantText += deltaToken
+                    controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: deltaToken }))
+                  })
                   return { tool_call_id: tc.id, role: 'tool' as const, content: result }
                 })
               )
 
-              /* Follow-up stream with tool results */
-              const followUpMessages = [
-                ...cerebrasMessages,
-                { role: 'assistant', content: assistantText || null, tool_calls: toolCallList },
-                ...toolResults,
-              ]
+              if (!toolStreamedToUI) {
+                /* Follow-up stream with tool results if tool didn't stream directly */
+                const followUpMessages = [
+                  ...cerebrasMessages,
+                  { role: 'assistant', content: assistantText || null, tool_calls: toolCallList },
+                  ...toolResults,
+                ]
 
-              console.log(`[Chat API] Follow-up stream after tool execution...`)
-              const followUpStream = await cerebras.chat.completions.create({
-                messages: followUpMessages as any,
-                model: CEREBRAS_MODEL,
-                max_completion_tokens: 1024,
-                temperature: 0.2,
-                stream: true,
-              })
+                console.log(`[Chat API] Follow-up stream after tool execution...`)
+                const followUpStream = await cerebras.chat.completions.create({
+                  messages: followUpMessages as any,
+                  model: CEREBRAS_MODEL,
+                  max_completion_tokens: 1024,
+                  temperature: 0.2,
+                  stream: true,
+                })
 
-              const followUpPartId = newPartId()
-              let followUpStarted = false
-              let followUpText = ''
-              for await (const chunk of followUpStream) {
-                const text = (chunk.choices?.[0]?.delta as any)?.content || ''
-                if (text) {
-                  if (!followUpStarted) {
-                    controller.enqueue(sseChunk({ type: 'text-start', id: followUpPartId }))
-                    followUpStarted = true
+                const followUpPartId = newPartId()
+                let followUpStarted = false
+                let followUpText = ''
+                for await (const chunk of followUpStream) {
+                  const text = (chunk.choices?.[0]?.delta as any)?.content || ''
+                  if (text) {
+                    if (!followUpStarted) {
+                      controller.enqueue(sseChunk({ type: 'text-start', id: followUpPartId }))
+                      followUpStarted = true
+                    }
+                    followUpText += text
+                    controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
                   }
-                  followUpText += text
-                  controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
                 }
+                if (followUpStarted) {
+                  controller.enqueue(sseChunk({ type: 'text-end', id: followUpPartId }))
+                }
+                assistantText = [assistantText, followUpText].filter(Boolean).join('\n')
               }
-              if (followUpStarted) {
-                controller.enqueue(sseChunk({ type: 'text-end', id: followUpPartId }))
-              }
-              // Combine initial + follow-up text as the full assistant response
-              assistantText = [assistantText, followUpText].filter(Boolean).join('\n')
             }
 
             // Persist the conversation turn to DB
