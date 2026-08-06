@@ -150,10 +150,10 @@ async function executeTool(
   if (name === 'summarize_workspace') {
     console.log(`[AI Tool] Executing 'summarize_workspace' for workspaceId=${workspaceId}`)
 
-    // Fetch ALL chunks with their document name for complete coverage
+    // Fetch ALL chunks with their document filename for complete coverage
     const chunks = await prisma.documentChunk.findMany({
       where: { workspaceId },
-      include: { document: { select: { name: true } } },
+      include: { document: { select: { filename: true } } },
       orderBy: [{ documentId: 'asc' }, { createdAt: 'asc' }],
       take: 200, // up from 20 — covers large workspaces
     })
@@ -166,7 +166,7 @@ async function executeTool(
     // Group chunks by document so the LLM gets full per-doc context
     const docMap = new Map<string, { name: string; texts: string[] }>()
     for (const chunk of chunks) {
-      const docName = (chunk as any).document?.name || chunk.documentId
+      const docName = chunk.document?.filename || chunk.documentId
       if (!docMap.has(chunk.documentId)) docMap.set(chunk.documentId, { name: docName, texts: [] })
       docMap.get(chunk.documentId)!.texts.push(chunk.content)
     }
