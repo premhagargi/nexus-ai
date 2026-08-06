@@ -150,37 +150,69 @@ async function executeTool(
   if (name === 'summarize_workspace') {
     console.log(`[AI Tool] Executing 'summarize_workspace' for workspaceId=${workspaceId}`)
 
-    // Fetch ALL chunks with their document filename for complete coverage
-    const chunks = await prisma.documentChunk.findMany({
-      where: { workspaceId },
-      include: { document: { select: { filename: true } } },
-      orderBy: [{ documentId: 'asc' }, { createdAt: 'asc' }],
-      take: 200, // up from 20 — covers large workspaces
+    // 1. Fetch all completed documents in the workspace
+    const documents = await prisma.document.findMany({
+      where: { workspaceId, status: 'COMPLETED' },
+      select: { id: true, filename: true },
+      orderBy: { createdAt: 'asc' },
     })
 
-    if (chunks.length === 0) {
-      console.log(`[AI Tool] No documents found in workspace ${workspaceId}`)
+    if (documents.length === 0) {
+      console.log(`[AI Tool] No completed documents found in workspace ${workspaceId}`)
       return 'No documents found to summarize.'
     }
 
-    // Group chunks by document so the LLM gets full per-doc context
+    // 2. Compute fair per-document chunk quota to prevent 1 large doc from monopolizing the limit
+    const MAX_TOTAL_CHUNKS = 200
+    const perDocQuota = Math.max(10, Math.floor(MAX_TOTAL_CHUNKS / documents.length))
+
+    console.log(`[AI Tool] Found ${documents.length} document(s). Sampling up to ${perDocQuota} chunks per document.`)
+
+    // 3. Fetch chunks for EACH document up to perDocQuota
     const docMap = new Map<string, { name: string; texts: string[] }>()
-    for (const chunk of chunks) {
-      const docName = chunk.document?.filename || chunk.documentId
-      if (!docMap.has(chunk.documentId)) docMap.set(chunk.documentId, { name: docName, texts: [] })
-      docMap.get(chunk.documentId)!.texts.push(chunk.content)
+    let totalChunkCount = 0
+
+    for (const doc of documents) {
+      const docChunks = await prisma.documentChunk.findMany({
+        where: { documentId: doc.id },
+        select: { content: true },
+        orderBy: { createdAt: 'asc' },
+        take: perDocQuota,
+      })
+
+      if (docChunks.length > 0) {
+        docMap.set(doc.id, {
+          name: doc.filename,
+          texts: docChunks.map((c) => c.content),
+        })
+        totalChunkCount += docChunks.length
+      }
+    }
+
+    if (docMap.size === 0) {
+      return 'No document text chunks found to summarize.'
     }
 
     const docsText = Array.from(docMap.values())
       .map(({ name, texts }) => `### Document: ${name}\n${texts.join('\n')}`)
       .join('\n\n---\n\n')
 
-    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${chunks.length} chunks...`)
+    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${totalChunkCount} total chunks...`)
 
     const summaryResp = await cerebras.chat.completions.create({
       messages: [{
         role: 'user',
-        content: `You are summarizing a workspace knowledge base. For each document, write a concise paragraph covering the key topics, facts, and conclusions it contains. Then write a brief overall workspace summary at the end.\n\nWorkspace documents:\n\n${docsText}`,
+        content: `You are summarizing a workspace knowledge base containing ${docMap.size} documents.
+
+CRITICAL INSTRUCTION: You MUST write a distinct, clear summary section for EVERY single document listed below. Do NOT omit or skip any document.
+
+Workspace Documents Content:
+${docsText}
+
+Output Format:
+1. Executive Overview: A high-level summary synthesizing all documents.
+2. Document-by-Document Breakdown: A dedicated section for EVERY document (titled with the exact document filename) covering its key topics and conclusions.
+3. Key Takeaways & Action Items.`,
       }],
       model: CEREBRAS_MODEL,
       max_completion_tokens: 2048,
@@ -192,12 +224,12 @@ async function executeTool(
       data: {
         workspaceId,
         toolName: 'summarize_workspace',
-        arguments: { documentCount: docMap.size, chunkCount: chunks.length },
-        result: { summary, status: 'success' },
+        arguments: { documentCount: docMap.size, chunkCount: totalChunkCount },
+        result: { status: 'success', summaryLength: summary.length, documentCount: docMap.size },
       },
     })
-    console.log(`[AI Tool] 'summarize_workspace' completed — ${docMap.size} docs.`)
-    return `Workspace summarized across ${docMap.size} document(s):\n\n${summary}`
+    console.log(`[AI Tool] 'summarize_workspace' generated ${summary.length} chars summary for ${docMap.size} documents.`)
+    return summary
   }
 
   return `Unknown tool: ${name}`
