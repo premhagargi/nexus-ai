@@ -349,12 +349,16 @@ function ChatInterface({
     const el = scrollAreaRef.current
     if (!el) return
     const { scrollTop, scrollHeight, clientHeight } = el
-    shouldAutoScroll.current = scrollHeight - scrollTop - clientHeight < 120
+    // Increase threshold to 250 to be more forgiving during fast streams
+    shouldAutoScroll.current = scrollHeight - scrollTop - clientHeight < 250
   }, [])
 
   useEffect(() => {
     if (shouldAutoScroll.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      // Use auto instead of smooth. Smooth scrolling can cause the scrollTop to lag 
+      // behind scrollHeight during fast streams, triggering handleScroll and 
+      // falsely disabling auto-scroll.
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
     }
   }, [allMessages, isLoading])
 

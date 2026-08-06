@@ -222,14 +222,28 @@ Output Format:
     })
 
     let summary = ''
+    let batch = ''
+    let lastEmitTime = Date.now()
+
     for await (const chunk of summaryRespStream) {
       const delta = (chunk.choices?.[0]?.delta as any)?.content || ''
       if (delta) {
         summary += delta
-        if (onToken) {
-          onToken(delta)
+        batch += delta
+        
+        const now = Date.now()
+        // Batch updates every 50ms to prevent browser freezing from too many ReactMarkdown re-renders
+        if (now - lastEmitTime > 50) {
+          if (onToken) onToken(batch)
+          batch = ''
+          lastEmitTime = now
         }
       }
+    }
+    
+    // Flush any remaining tokens
+    if (batch && onToken) {
+      onToken(batch)
     }
 
     await prisma.toolExecution.create({
