@@ -355,20 +355,32 @@ export async function POST(req: NextRequest) {
     }
 
     /* ── Build messages for Cerebras ── */
-    const systemPrompt = buildSystemPrompt(context)
+    const systemPrompt = buildSystemPrompt()
 
-    const formattedMessages = (Array.isArray(messages) ? messages : [])
+    // Keep history reasonably bounded (last 6 turns) to prevent context confusion in long sessions
+    const recentMessages = (Array.isArray(messages) ? messages : []).slice(-6)
+
+    const formattedMessages = recentMessages
       .map((m: any) => ({
         role: m.role === 'assistant' ? 'assistant' : m.role === 'system' ? 'system' : 'user',
         content: extractTextFromMessage(m),
       }))
       .filter((m: any) => typeof m.content === 'string' && m.content.trim().length > 0)
 
+    // Detach RAG context from the global system prompt.
+    // Instead, attach it directly to the *latest* user question so the LLM knows it's fresh data.
+    if (formattedMessages.length > 0 && context) {
+      const lastMsg = formattedMessages[formattedMessages.length - 1]
+      if (lastMsg.role === 'user') {
+        lastMsg.content = `[RETRIEVED WORKSPACE CONTEXT]\n${context}\n\n[USER QUESTION]\n${lastMsg.content}`
+      }
+    }
+
     const cerebrasMessages = [
       { role: 'system', content: systemPrompt },
       ...(formattedMessages.length > 0
         ? formattedMessages
-        : [{ role: 'user', content: queryText || 'hi' }]),
+        : [{ role: 'user', content: context ? `[RETRIEVED WORKSPACE CONTEXT]\n${context}\n\n[USER QUESTION]\n${queryText || 'hi'}` : (queryText || 'hi') }]),
     ]
 
     console.log(`[Chat API] Model: ${CEREBRAS_MODEL} | Messages: ${cerebrasMessages.length}`)

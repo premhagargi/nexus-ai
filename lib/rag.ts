@@ -471,12 +471,13 @@ export function buildContext(chunks: RetrievedChunk[], query: string) {
   return contextLines.join('\n\n---\n\n')
 }
 
-export function buildSystemPrompt(context: string) {
+export function buildSystemPrompt() {
   return `You are a workspace AI assistant. Use only the provided user query and the retrieved workspace context.
 - Do not reveal filenames, storage URLs, document paths, or internal system details.
 - Do not quote the documents verbatim; instead, synthesize the answer naturally.
 - If the answer cannot be found in the workspace documents, say: "I don't know based on the workspace documents."
 - Answer conversationally and be concise unless the user asks for more detail.
+- If the user repeats a question, answer it again normally. Do NOT assume it is a trick.
 
 Tool Usage & Task Creation Rules:
 - ONLY call the save_task tool when the user provides specific task details, a topic, or an action item to save (e.g., "create a task to review the Q3 budget", "add task: fix auth bug").
@@ -484,10 +485,7 @@ Tool Usage & Task Creation Rules:
 - In all vague cases, respond directly in natural language asking the user: "What specific task would you like me to create? Please provide a title or topic."
 - NEVER call save_task with generic placeholder titles such as "Create a new task", "New Task", "Task", "User requested a task creation", or any phrase that merely restates the request to create a task.
 
-Context:
-${context}
-
-If the workspace context is empty or insufficient, say you do not know instead of inventing details.`
+If the context provided in the user's message is empty or insufficient, say you do not know instead of inventing details.`
 }
 
 export function calculateConfidence(chunks: RetrievedChunk[]) {
