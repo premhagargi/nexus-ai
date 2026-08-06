@@ -338,14 +338,47 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Chat API] Query: "${queryText.substring(0, 100)}${queryText.length > 100 ? '...' : ''}"`)
 
-    if (queryText && (lastMessage?.role === 'user' || !lastMessage?.role)) {
-      if (shouldSkipRetrieval(queryText)) {
-        console.log(`[Chat API] Fast-path: query "${queryText}" matched tool/conversational pattern. Skipping RAG search.`)
+    /* ── Cerebras client initialization ── */
+    const cerebrasApiKey = process.env.CEREBRAS_API_KEY || ''
+    const cerebras = new Cerebras({ apiKey: cerebrasApiKey })
+
+    let searchTarget = queryText
+
+    // Coreference Resolution: If query is short and contains pronouns, rewrite it using history for RAG
+    if (messages.length > 1 && queryText.split(' ').length < 10) {
+      const containsPronoun = /\b(it|they|them|he|she|this|that|these|those)\b/i.test(queryText)
+      if (containsPronoun) {
+        console.log(`[Chat API] Resolving coreference for query: "${queryText}"`)
+        const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
+        try {
+          const rewriteResp = await cerebras.chat.completions.create({
+            model: CEREBRAS_MODEL,
+            messages: [
+              { role: 'system', content: 'Rewrite the final user question into a standalone search query by resolving pronouns (it, they, this) using the conversation history. Reply ONLY with the standalone query. Do not add quotes or explanations.' },
+              { role: 'user', content: recentHistory }
+            ],
+            max_completion_tokens: 50,
+            temperature: 0,
+          })
+          const rewritten = (rewriteResp.choices?.[0]?.message?.content || '').trim()
+          if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
+            searchTarget = rewritten
+            console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
+          }
+        } catch (e: any) {
+          console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
+        }
+      }
+    }
+
+    if (searchTarget && (lastMessage?.role === 'user' || !lastMessage?.role)) {
+      if (shouldSkipRetrieval(searchTarget)) {
+        console.log(`[Chat API] Fast-path: query "${searchTarget}" matched tool/conversational pattern. Skipping RAG search.`)
       } else {
         const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
         try {
           console.log(`[Chat API] Starting retrieval for workspace ${workspaceId}...`)
-          const retrieval = await retrieveWorkspaceContext(workspaceId, queryText, googleApiKey)
+          const retrieval = await retrieveWorkspaceContext(workspaceId, searchTarget, googleApiKey)
           context = retrieval.context
           console.log(`[Chat API] Retrieval method=${retrieval.method} confidence=${retrieval.confidence.toFixed(2)} chunks=${retrieval.chunks.length}`)
         } catch (retrievalError: any) {
@@ -384,12 +417,6 @@ export async function POST(req: NextRequest) {
     ]
 
     console.log(`[Chat API] Model: ${CEREBRAS_MODEL} | Messages: ${cerebrasMessages.length}`)
-
-    /* ── Cerebras client ── */
-    const cerebrasApiKey = process.env.CEREBRAS_API_KEY || ''
-    console.log(`[Chat API] Cerebras API key present: ${!!cerebrasApiKey}`)
-
-    const cerebras = new Cerebras({ apiKey: cerebrasApiKey })
 
     /* ── Streaming response with tool support ── */
     const readable = new ReadableStream({
