@@ -185,18 +185,7 @@ function MarkdownContent({ content }: { content: string }) {
   )
 }
 
-/* ─── auto-resize textarea hook ─── */
 
-function useAutoResize(value: string) {
-  const ref = useRef<HTMLTextAreaElement>(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
-  }, [value])
-  return ref
-}
 
 /* ─── typing indicator ─── */
 
@@ -335,7 +324,6 @@ function ChatInterface({
   const isLoading = status === 'streaming' || status === 'submitted'
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useAutoResize(input)
 
   // Manually merge initial messages with new messages from useChat
   const allMessages = [
@@ -444,21 +432,10 @@ function ChatInterface({
         {allMessages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-4 text-center">
             <div className="w-full max-w-2xl flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
-              <div className="flex h-16 w-16 items-center justify-center mb-4">
-                <img src="/ai-magic-icon.webp" alt="Nexus AI" className="h-full w-full object-contain drop-shadow-lg" />
-              </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-1.5">
-                How can I help you today?
-              </h2>
-              <p className="text-sm text-muted-foreground max-w-md mb-8">
-                Ask questions about your workspace documents or instruct me to perform tasks.
-              </p>
-
               {/* Centered Input Box */}
               <div className="w-full text-left">
                 <div className="relative flex items-end gap-2 rounded-2xl border border-border/80 bg-muted/40 backdrop-blur-md px-4 py-2.5 shadow-lg transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-xl focus-within:shadow-indigo-500/5">
                   <textarea
-                    ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -468,10 +445,8 @@ function ChatInterface({
                       }
                     }}
                     placeholder="Message Nexus AI…"
-                    className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
+                    className="flex-1 resize bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none min-h-[60px] max-w-full"
                     disabled={isLoading}
-                    rows={1}
-                    style={{ minHeight: '28px', maxHeight: '200px' }}
                   />
 
                   {isLoading ? (
@@ -550,7 +525,6 @@ function ChatInterface({
           <div className="mx-auto max-w-3xl">
             <div className="relative flex items-end gap-2 rounded-xl border border-border/60 bg-muted/40 backdrop-blur-sm px-3 py-1.5 shadow-sm transition-colors focus-within:border-indigo-500/50 focus-within:bg-muted/60 focus-within:shadow-md focus-within:shadow-indigo-500/5">
               <textarea
-                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -560,10 +534,8 @@ function ChatInterface({
                   }
                 }}
                 placeholder="Message Nexus AI…"
-                className="flex-1 resize-none bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none"
+                className="flex-1 resize bg-transparent text-[0.9375rem] leading-6 placeholder:text-muted-foreground/50 focus:outline-none min-h-[60px] max-w-full"
                 disabled={isLoading}
-                rows={1}
-                style={{ minHeight: '24px', maxHeight: '200px' }}
               />
 
               {isLoading ? (

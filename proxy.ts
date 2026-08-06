@@ -4,7 +4,7 @@ import { jwtVerify } from 'jose'
 const secretKey = process.env.JWT_SECRET || 'super-secret-key-for-nexus-ai-dev'
 const key = new TextEncoder().encode(secretKey)
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const session = request.cookies.get('session')?.value
 
   let user = null
