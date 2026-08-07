@@ -365,69 +365,97 @@ async function executeTool(
 
     if (documents.length === 0) {
       console.log(`[AI Tool] No completed documents found in workspace ${workspaceId}`)
-      return 'No documents found to summarize.'
+      return 'No completed documents found in workspace to summarize.'
     }
 
-    // 2. Compute fair per-document chunk quota to prevent exceeding the 8k token limit of Cerebras.
-    // 24 chunks * 1100 chars = ~26,400 chars (approx 6.5k tokens).
-    const MAX_TOTAL_CHUNKS = 24
-    const perDocQuota = Math.max(2, Math.floor(MAX_TOTAL_CHUNKS / documents.length))
+    // 2. Compute fair per-document character budget (20k total chars across all docs)
+    const TOTAL_CHAR_BUDGET = 20000
+    const perDocCharBudget = Math.max(1500, Math.floor(TOTAL_CHAR_BUDGET / documents.length))
 
-    console.log(`[AI Tool] Found ${documents.length} document(s). Sampling up to ${perDocQuota} chunks per document.`)
+    console.log(`[AI Tool] Found ${documents.length} document(s). Allocating up to ${perDocCharBudget} chars per document.`)
 
-    // 3. Fetch chunks for EACH document up to perDocQuota
-    const docMap = new Map<string, { name: string; texts: string[] }>()
-    let totalChunkCount = 0
+    // 3. Multi-position sampling per document (beginning, middle, end)
+    const docSummaries: { name: string; content: string }[] = []
+    let totalSampledChars = 0
 
     for (const doc of documents) {
-      const docChunks = await prisma.documentChunk.findMany({
+      const chunks = await prisma.documentChunk.findMany({
         where: { documentId: doc.id },
         select: { content: true },
         orderBy: { createdAt: 'asc' },
-        take: perDocQuota,
       })
 
-      if (docChunks.length > 0) {
-        docMap.set(doc.id, {
-          name: doc.filename,
-          texts: docChunks.map((c) => c.content),
-        })
-        totalChunkCount += docChunks.length
+      if (chunks.length === 0) continue
+
+      let docText = ''
+      const totalDocChars = chunks.reduce((sum, c) => sum + c.content.length, 0)
+
+      if (totalDocChars <= perDocCharBudget) {
+        docText = chunks.map((c) => c.content).join('\n\n')
+      } else {
+        // Sample chunks evenly across the entire document duration (start, middle, end)
+        const numChunksToPick = Math.max(2, Math.floor(perDocCharBudget / 900))
+        const step = Math.max(1, Math.floor(chunks.length / numChunksToPick))
+        const selectedChunks: string[] = []
+        let currentLen = 0
+
+        for (let i = 0; i < chunks.length && selectedChunks.length < numChunksToPick; i += step) {
+          const chunkText = chunks[i].content
+          if (currentLen + chunkText.length > perDocCharBudget) {
+            selectedChunks.push(chunkText.slice(0, perDocCharBudget - currentLen))
+            break
+          }
+          selectedChunks.push(chunkText)
+          currentLen += chunkText.length
+        }
+        docText = selectedChunks.join('\n\n[...]\n\n')
       }
+
+      docSummaries.push({ name: doc.filename, content: docText })
+      totalSampledChars += docText.length
     }
 
-    if (docMap.size === 0) {
-      return 'No document text chunks found to summarize.'
+    if (docSummaries.length === 0) {
+      return 'No document text content found to summarize.'
     }
 
-    const docsText = Array.from(docMap.values())
-      .map(({ name, texts }) => `### Document: ${name}\n${texts.join('\n')}`)
-      .join('\n\n---\n\n')
+    const docNamesIndex = docSummaries.map((d, i) => `${i + 1}. "${d.name}"`).join('\n')
+    const formattedDocsContent = docSummaries
+      .map((d, i) => `=== DOCUMENT ${i + 1} OF ${docSummaries.length}: "${d.name}" ===\n${d.content}`)
+      .join('\n\n----------------------------------------\n\n')
 
-    const docNamesList = Array.from(docMap.values()).map(d => `- ${d.name}`).join('\n')
+    console.log(`[AI Tool] Summarizing ${docSummaries.length} document(s) (${totalSampledChars} total chars sampled)...`)
 
-    console.log(`[AI Tool] Summarizing ${docMap.size} document(s) across ${totalChunkCount} total chunks with streaming...`)
+    const promptContent = `You are an expert AI knowledge base summarizer analyzing EXACTLY ${docSummaries.length} documents.
+
+LIST OF ALL DOCUMENTS TO BE SUMMARIZED:
+${docNamesIndex}
+
+CRITICAL RULES:
+1. You MUST write a distinct, dedicated subsection for EVERY SINGLE DOCUMENT listed above under "Document Breakdown".
+2. DO NOT SKIP OR OMIT ANY DOCUMENT. If there are ${docSummaries.length} documents in the index, you MUST have ${docSummaries.length} separate document sections.
+3. Treat all documents with equal weight and detail.
+
+EXTRACTED WORKSPACE DOCUMENT CONTENT:
+${formattedDocsContent}
+
+REQUIRED OUTPUT FORMAT (Markdown):
+# Executive Workspace Summary
+
+## Executive Overview
+A high-level synthesis combining insights across all ${docSummaries.length} documents.
+
+## Document-by-Document Breakdown
+Write a dedicated section for EVERY document using its exact filename as the header:
+${docSummaries.map((d) => `### ${d.name}\n- **Core Summary**: ...\n- **Key Takeaways**: ...`).join('\n\n')}
+
+## Key Takeaways & Action Items
+Bullet points highlighting main takeaways and next steps.`
 
     const summaryRespStream = await cerebras.chat.completions.create({
-      messages: [{
-        role: 'user',
-        content: `You are summarizing a workspace knowledge base containing exactly ${docMap.size} documents.
-
-The documents are:
-${docNamesList}
-
-CRITICAL INSTRUCTION: You MUST write a distinct, clear summary section for EVERY SINGLE DOCUMENT listed above. Do NOT omit or skip any document. If there are 3 documents, you must have 3 distinct sections.
-
-Workspace Documents Content:
-${docsText}
-
-Output Format:
-1. Executive Overview: A high-level summary synthesizing all documents.
-2. Document-by-Document Breakdown: A dedicated section for EVERY document (titled with the exact document filename) covering its key topics and conclusions.
-3. Key Takeaways & Action Items.`,
-      }],
+      messages: [{ role: 'user', content: promptContent }],
       model: CEREBRAS_MODEL,
-      max_completion_tokens: 2048,
+      max_completion_tokens: 3000,
       temperature: 0.2,
       stream: true,
     })
@@ -441,8 +469,7 @@ Output Format:
         if (onToken) {
           onToken(delta)
         }
-        // Artificially slow down Cerebras to human-readable speeds (also prevents React freezing)
-        await new Promise(r => setTimeout(r, 35))
+        await new Promise((r) => setTimeout(r, 25))
       }
     }
 
@@ -450,14 +477,14 @@ Output Format:
       data: {
         workspaceId,
         toolName: 'summarize_workspace',
-        arguments: { documentCount: docMap.size, chunkCount: totalChunkCount },
-        result: { status: 'success', summaryLength: summary.length, documentCount: docMap.size },
+        arguments: { documentCount: docSummaries.length, totalSampledChars },
+        result: { status: 'success', summaryLength: summary.length, documentCount: docSummaries.length },
       },
     })
-    console.log(`[AI Tool] 'summarize_workspace' streamed ${summary.length} chars summary for ${docMap.size} documents.`)
+    console.log(`[AI Tool] 'summarize_workspace' streamed ${summary.length} chars summary for ${docSummaries.length} documents.`)
     
     if (args?.sendToSlack) {
-      sendToSlackWebhook(summary).catch(err => console.error(err));
+      sendToSlackWebhook(summary).catch((err) => console.error(err))
     }
 
     return summary
