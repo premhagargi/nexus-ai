@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { inngest } from '@/lib/inngest/client'
 import { createDocumentChunks, embedTexts, generateFallbackEmbedding } from '@/lib/rag'
 import { createClient } from '@/lib/supabase/server'
+// @ts-ignore
 import pdfParse from 'pdf-parse/lib/pdf-parse.js'
 import mammoth from 'mammoth'
 

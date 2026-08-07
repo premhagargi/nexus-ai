@@ -201,7 +201,7 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
         }
       }}
     >
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button disabled={uploading} className="shadow-lg hover:shadow-indigo-500/10 transition-all">
           <Upload className="mr-2 h-4 w-4" />
           Upload Documents
