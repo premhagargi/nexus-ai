@@ -3,9 +3,11 @@ import prisma from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { createDocumentChunks, embedTexts } from '@/lib/rag'
 
-export const processDocumentWorker = (inngest.createFunction as any)(
-  { id: 'process-document-worker' },
-  { event: 'document/process' },
+export const processDocumentWorker = inngest.createFunction(
+  {
+    id: 'process-document-worker',
+    triggers: [{ event: 'document/process' }],
+  },
   async ({ event, step }: any) => {
     const { documentId, workspaceId, storagePath: rawStoragePath, storageUrl, filename, sourceType } = event.data
 
