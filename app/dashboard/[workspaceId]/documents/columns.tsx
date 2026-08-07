@@ -97,6 +97,28 @@ export const columns: ColumnDef<Document>[] = [
     cell: ({ row }) => {
       const doc = row.original
       const [isDeleting, setIsDeleting] = useState(false)
+      const [isReprocessing, setIsReprocessing] = useState(false)
+
+      const handleReprocess = async () => {
+        setIsReprocessing(true)
+        try {
+          const res = await fetch(`/api/documents/${doc.id}/reprocess`, { method: 'POST' })
+          const data = await res.json()
+          if (res.ok) {
+            const { toast } = await import('sonner')
+            toast.success(`Reprocessing started for "${doc.filename}"`)
+            window.location.reload()
+          } else {
+            const { toast } = await import('sonner')
+            toast.error(data.error || 'Failed to reprocess document')
+          }
+        } catch (err: any) {
+          const { toast } = await import('sonner')
+          toast.error(err.message || 'Reprocessing failed')
+        } finally {
+          setIsReprocessing(false)
+        }
+      }
 
       const handleDelete = async () => {
         if (!confirm(`Are you sure you want to delete "${doc.filename}"? This action cannot be undone.`)) return
@@ -124,7 +146,7 @@ export const columns: ColumnDef<Document>[] = [
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted" disabled={isDeleting}>
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted" disabled={isDeleting || isReprocessing}>
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -134,6 +156,11 @@ export const columns: ColumnDef<Document>[] = [
               <DropdownMenuItem onClick={() => navigator.clipboard.writeText(doc.id)} className="cursor-pointer hover:bg-muted focus:bg-muted">
                 Copy ID
               </DropdownMenuItem>
+              {(doc.status === 'FAILED' || doc.status === 'PROCESSING') && (
+                <DropdownMenuItem onClick={handleReprocess} className="cursor-pointer hover:bg-muted focus:bg-muted text-amber-400">
+                  Retry Processing
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator className="bg-muted" />
               <DropdownMenuItem 
                 onClick={handleDelete}

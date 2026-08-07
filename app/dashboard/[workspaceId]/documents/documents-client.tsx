@@ -22,11 +22,21 @@ export function DocumentsClient({ initialDocuments, workspaceId }: { initialDocu
   const isProcessing = initialDocuments.some(d => d.status === 'PROCESSING')
 
   useEffect(() => {
+    // Automatically attempt reprocessing for any stuck PROCESSING document on load
+    const processingDocs = initialDocuments.filter(d => d.status === 'PROCESSING')
+    if (processingDocs.length > 0) {
+      processingDocs.forEach(doc => {
+        fetch(`/api/documents/${doc.id}/reprocess`, { method: 'POST' }).catch(() => {})
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     if (!isProcessing) return
 
     const interval = setInterval(() => {
       router.refresh()
-    }, 3000)
+    }, 2500)
 
     return () => clearInterval(interval)
   }, [isProcessing, router])

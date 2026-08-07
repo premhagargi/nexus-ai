@@ -95,8 +95,6 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log(`[DocUpload] Created document record ${document.id}. Dispatching job to Inngest background queue worker...`)
-
     try {
       const { inngest } = await import('@/lib/inngest/client')
       await inngest.send({
@@ -104,15 +102,20 @@ export async function POST(req: NextRequest) {
         data: {
           documentId: document.id,
           workspaceId,
+          storagePath: uploadData.path,
           storageUrl: publicUrlData.publicUrl,
           filename: file.name,
           sourceType: fileExt,
         },
       })
       console.log(`[DocUpload] Event "document/process" successfully published to Inngest queue.`)
+      // Trigger background processing so document completes even if Inngest worker runner is unattached in serverless
+      processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
+        console.error('[DocUpload] Background processing fallback error:', err)
+      })
     } catch (inngestErr) {
       console.warn('[DocUpload] Inngest queue dispatch warning, executing local fallback processing:', inngestErr)
-      // Fallback to synchronous execution if Inngest connection is unavailable
+      // Fallback to background execution if Inngest connection is unavailable
       processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
         console.error('[DocUpload] Local background fallback processing failed:', err)
       })
