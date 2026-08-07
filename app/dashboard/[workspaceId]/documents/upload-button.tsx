@@ -4,9 +4,10 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Upload, X, FileText, CheckCircle2, AlertCircle, Files, Plus, Trash2 } from 'lucide-react'
+import { Upload, X, CheckCircle2, AlertCircle, Files, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 
 export interface UploadFileItem {
   file: File
@@ -38,7 +39,6 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
         toast.error(`"${f.name}" exceeds 20MB size limit`)
         return
       }
-      // avoid duplicates by filename + size
       if (!filesList.some((existing) => existing.file.name === f.name && existing.file.size === f.size)) {
         added.push({
           file: f,
@@ -103,11 +103,9 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
     let successCount = 0
     let failCount = 0
 
-    // Sequential Upload loop
     for (let i = 0; i < filesList.length; i++) {
       const item = filesList[i]
 
-      // Skip already completed files if re-triggered
       if (item.status === 'completed') {
         successCount++
         continue
@@ -163,7 +161,7 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
         setFilesList([])
         if (fileInputRef.current) fileInputRef.current.value = ''
         setOpen(false)
-      }, 900)
+      }, 800)
     }
   }
 
@@ -202,33 +200,33 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
       }}
     >
       <DialogTrigger>
-        <Button disabled={uploading} className="shadow-lg hover:shadow-indigo-500/10 transition-all">
+        <Button disabled={uploading}>
           <Upload className="mr-2 h-4 w-4" />
           Upload Documents
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg p-6 bg-card border-border shadow-2xl rounded-2xl">
-        <DialogHeader className="space-y-1.5 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
+      <DialogContent className="sm:max-w-lg p-6 bg-card border-border rounded-xl">
+        <DialogHeader className="space-y-1 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Files className="h-5 w-5 text-indigo-400" />
             Upload Documents
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Add multiple items (PDF, DOCX, TXT, MD, CSV) up to 20MB each. Documents will process sequentially.
+            Select files (PDF, DOCX, TXT, MD, CSV) up to 20MB to process for your knowledge base.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Drag & Drop File Select Area */}
+          {/* Drag & Drop Area */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => !uploading && fileInputRef.current?.click()}
-            className={`relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
               isDragging
-                ? 'border-indigo-500 bg-indigo-500/10 scale-[0.99]'
-                : 'border-border/80 bg-muted/20 hover:bg-muted/40 hover:border-indigo-500/50'
+                ? 'border-indigo-500 bg-indigo-500/10'
+                : 'border-border/80 bg-muted/20 hover:bg-muted/40 hover:border-indigo-500/40'
             } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
           >
             <input
@@ -240,20 +238,20 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
               disabled={uploading}
               className="hidden"
             />
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-2">
-              <Upload className="h-5 w-5 text-indigo-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-2">
+              <Upload className="h-4 w-4 text-indigo-400" />
             </div>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="text-sm font-medium text-foreground">
               Click to select or drag & drop files
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Supports PDF, DOCX, TXT, MD, CSV (Max 20MB)
+            <p className="text-xs text-muted-foreground mt-0.5">
+              PDF, DOCX, TXT, MD, CSV (Max 20MB)
             </p>
           </div>
 
           {/* Cards List for Selected Files */}
           {filesList.length > 0 && (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <div className="flex items-center justify-between px-1 text-xs text-muted-foreground font-medium">
                 <span>
                   {filesList.length} File{filesList.length === 1 ? '' : 's'} ({totalSizeMB} MB)
@@ -270,7 +268,7 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
               </div>
 
               <div className="max-h-56 overflow-y-auto space-y-2 pr-1 scrollbar-none">
-                {filesList.map((item, idx) => {
+                {filesList.map((item) => {
                   const ext = (item.file.name.split('.').pop() || '').toLowerCase()
                   const isUploadingThis = item.status === 'uploading'
                   const isDone = item.status === 'completed'
@@ -279,73 +277,69 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
                   return (
                     <div
                       key={item.id}
-                      className={`relative flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                      className={`flex items-center justify-between gap-3 p-2.5 rounded-lg border text-xs transition-colors ${
                         isUploadingThis
-                          ? 'shimmer border-indigo-500/40 bg-indigo-500/5'
+                          ? 'border-indigo-500/50 bg-indigo-500/10'
                           : isDone
                           ? 'border-emerald-500/30 bg-emerald-500/5'
                           : isError
                           ? 'border-red-500/30 bg-red-500/5'
-                          : 'border-border/70 bg-card hover:bg-muted/30'
+                          : 'border-border/70 bg-card'
                       }`}
                     >
-                      {/* Left side: Icon & File Name */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {/* Left: Extension Badge & File Info */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border font-mono text-[10px] font-bold uppercase tracking-wider ${getFileBadgeColor(
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border font-mono text-[10px] font-bold uppercase tracking-wider ${getFileBadgeColor(
                             ext
                           )}`}
                         >
                           {ext}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p
-                            className={`text-xs font-semibold truncate ${
-                              isUploadingThis ? 'shimmer text-indigo-400' : 'text-foreground'
-                            }`}
-                            title={item.file.name}
-                          >
+                          <p className="font-medium text-foreground truncate" title={item.file.name}>
                             {item.file.name}
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          <p className="text-[11px] text-muted-foreground font-mono">
                             {(item.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
 
-                      {/* Right side: Status indicator & Remove button */}
+                      {/* Right: Simple Status Badges & Action */}
                       <div className="flex items-center gap-2 shrink-0">
                         {isUploadingThis && (
                           <Badge
                             variant="secondary"
-                            className="shimmer font-mono text-[10px] uppercase tracking-wider text-indigo-400 border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5"
+                            className="font-mono text-[10px] uppercase text-indigo-400 border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 flex items-center gap-1.5"
                           >
+                            <Spinner className="h-3 w-3 animate-spin text-indigo-400" />
                             Uploading...
                           </Badge>
                         )}
                         {isDone && (
                           <Badge
                             variant="secondary"
-                            className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 flex items-center gap-1"
+                            className="font-mono text-[10px] uppercase text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 flex items-center gap-1"
                           >
-                            <CheckCircle2 className="h-3 w-3 inline text-emerald-400" />
+                            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                             Uploaded
                           </Badge>
                         )}
                         {isError && (
                           <Badge
                             variant="destructive"
-                            className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 flex items-center gap-1"
+                            className="font-mono text-[10px] uppercase px-2 py-0.5 flex items-center gap-1"
                             title={item.errorMessage}
                           >
-                            <AlertCircle className="h-3 w-3 inline" />
+                            <AlertCircle className="h-3 w-3" />
                             Failed
                           </Badge>
                         )}
                         {item.status === 'idle' && (
                           <Badge
                             variant="outline"
-                            className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground border-border px-2 py-0.5"
+                            className="font-mono text-[10px] uppercase text-muted-foreground border-border px-2 py-0.5"
                           >
                             Queued
                           </Badge>
@@ -355,7 +349,7 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
                           <button
                             type="button"
                             onClick={() => handleRemoveFile(item.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
+                            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted"
                             aria-label={`Remove ${item.file.name}`}
                           >
                             <X className="h-3.5 w-3.5" />
@@ -375,12 +369,13 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
               type="button"
               onClick={startSequentialUpload}
               disabled={uploading || filesList.length === 0}
-              className="w-full font-medium shadow-md"
+              className="w-full font-medium"
             >
               {uploading ? (
-                <span className="shimmer text-indigo-200">
+                <>
+                  <Spinner className="mr-2 h-4 w-4 animate-spin inline" />
                   Uploading ({currentIndex !== null ? currentIndex + 1 : 0}/{filesList.length})...
-                </span>
+                </>
               ) : (
                 `Start Upload (${filesList.length} Item${filesList.length === 1 ? '' : 's'})`
               )}
@@ -393,5 +388,6 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
 }
 
 export { UploadButton as UploadDocumentButton }
+
 
 
