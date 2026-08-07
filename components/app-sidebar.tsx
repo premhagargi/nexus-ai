@@ -200,40 +200,52 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}`)} isActive={pathname === `/dashboard/${currentWorkspace?.id}`} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <LayoutDashboard className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">Overview</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname === `/dashboard/${currentWorkspace?.id}`} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <LayoutDashboard className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">Overview</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}/chat`)} isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/chat`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <MessageSquare className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">AI Chat</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}/chat`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/chat`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <MessageSquare className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">AI Chat</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}/documents`)} isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/documents`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <Files className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">Knowledge Base</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}/documents`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/documents`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <Files className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">Knowledge Base</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}/tasks`)} isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/tasks`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <CheckSquare className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">Tasks</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}/tasks`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/tasks`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <CheckSquare className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">Tasks</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}/logs`)} isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/logs`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <Activity className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">Tool Logs</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}/logs`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/logs`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <Activity className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">Tool Logs</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push(`/dashboard/${currentWorkspace?.id}/settings`)} isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/settings`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer">
-                  <Settings className="h-[18px] w-[18px] mr-2.5" />
-                  <span className="font-medium text-[15px]">Settings</span>
-                </SidebarMenuButton>
+                <Link href={`/dashboard/${currentWorkspace?.id}/settings`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/settings`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <Settings className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">Settings</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

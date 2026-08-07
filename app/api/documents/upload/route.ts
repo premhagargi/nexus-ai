@@ -108,20 +108,17 @@ export async function POST(req: NextRequest) {
           sourceType: fileExt,
         },
       })
-      console.log(`[DocUpload] Event "document/process" successfully published to Inngest queue.`)
-      // Trigger background processing so document completes even if Inngest worker runner is unattached in serverless
-      processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
-        console.error('[DocUpload] Background processing fallback error:', err)
-      })
+      console.log(`[DocUpload] Event "document/process" published to Inngest queue.`)
     } catch (inngestErr) {
-      console.warn('[DocUpload] Inngest queue dispatch warning, executing local fallback processing:', inngestErr)
-      // Fallback to background execution if Inngest connection is unavailable
-      processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
-        console.error('[DocUpload] Local background fallback processing failed:', err)
-      })
+      console.warn('[DocUpload] Inngest queue send warning:', inngestErr)
     }
 
-    return NextResponse.json({ success: true, documentId: document.id, status: 'PROCESSING' })
+    // Process document synchronously so execution completes reliably on serverless Vercel containers
+    await processDocument(document.id, uploadData.path, workspaceId, file.name)
+
+    const finalDoc = await prisma.document.findUnique({ where: { id: document.id } })
+
+    return NextResponse.json({ success: true, documentId: document.id, status: finalDoc?.status || 'COMPLETED' })
   } catch (error: any) {
     console.error('[DocUpload] POST Route Handler Error:', error)
     return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })

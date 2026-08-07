@@ -70,12 +70,12 @@ export async function POST(
       console.warn('[ReprocessRoute] Inngest queue send warning:', inngestErr)
     }
 
-    // Also trigger background execution
-    reprocessDocument(document.id, storagePath, document.workspaceId, document.filename).catch((err) => {
-      console.error('[ReprocessRoute] Background fallback reprocess error:', err)
-    })
+    // Execute reprocessing synchronously so serverless containers complete execution reliably
+    await reprocessDocument(document.id, storagePath, document.workspaceId, document.filename)
 
-    return NextResponse.json({ success: true, documentId, status: 'PROCESSING' })
+    const finalDoc = await prisma.document.findUnique({ where: { id: documentId } })
+
+    return NextResponse.json({ success: true, documentId, status: finalDoc?.status || 'COMPLETED' })
   } catch (error: any) {
     console.error('[ReprocessRoute] Error:', error)
     return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })
