@@ -1,4 +1,6 @@
+import { requireWorkspaceAccess } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { redirect } from 'next/navigation'
 import { SettingsClient } from './settings-client'
 
 export default async function SettingsPage({
@@ -7,7 +9,12 @@ export default async function SettingsPage({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  
+  const auth = await requireWorkspaceAccess(workspaceId)
+
+  if (!auth) {
+    redirect('/dashboard')
+  }
+
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
     include: { owner: true }

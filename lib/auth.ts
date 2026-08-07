@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secretKey = process.env.JWT_SECRET || 'super-secret-key-for-nexus-ai-dev'
+const secretKey = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing in production!') })() : 'nexus-ai-dev-jwt-secret-key-change-in-prod-32bytes')
 const key = new TextEncoder().encode(secretKey)
 
 export async function encrypt(payload: any) {
@@ -48,3 +48,31 @@ export async function clearSession() {
   const cookieStore = await cookies()
   cookieStore.delete('session')
 }
+
+export async function requireWorkspaceAccess(workspaceId: string) {
+  const session = await getSession()
+  if (!session?.userId) return null
+
+  const membership = await import('./prisma').then(m => m.default.membership.findFirst({
+    where: {
+      workspaceId,
+      userId: session.userId,
+    },
+    include: {
+      workspace: true,
+      user: {
+        select: { id: true, email: true }
+      }
+    }
+  }))
+
+  if (!membership) return null
+
+  return {
+    userId: session.userId,
+    role: membership.role,
+    workspace: membership.workspace,
+    user: membership.user
+  }
+}
+

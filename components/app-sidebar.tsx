@@ -121,7 +121,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
           </div>
 
           <DropdownMenu>
-            <DropdownMenuTrigger render={
+            <DropdownMenuTrigger>
               <Button variant="ghost" className="w-full flex items-center justify-between px-4 py-7 bg-muted/50 hover:bg-muted border border-border/50 transition-all duration-300 ease-out hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] rounded-xl group outline-none">
                 <div className="flex flex-col items-start text-left gap-0.5">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Workspace</span>
@@ -129,7 +129,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                 </div>
                 <ChevronsUpDown className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
               </Button>
-            } />
+            </DropdownMenuTrigger>
             <DropdownMenuContent className="w-64 bg-background/95 backdrop-blur-xl border-border rounded-xl" align="start">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Your Workspaces</DropdownMenuLabel>

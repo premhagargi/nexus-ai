@@ -113,7 +113,7 @@ export function LogsClient({ logs }: { logs: any[] }) {
                     {/* Info Popover */}
                     <TableCell className="py-3 text-right">
                       <Popover>
-                        <PopoverTrigger render={
+                        <PopoverTrigger>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -122,7 +122,7 @@ export function LogsClient({ logs }: { logs: any[] }) {
                           >
                             <Info className="h-4 w-4" />
                           </Button>
-                        } />
+                        </PopoverTrigger>
                         <PopoverContent align="end" className="w-[420px] p-4 bg-popover border-border shadow-xl rounded-xl">
                           <PopoverHeader className="pb-3 border-b border-border/60">
                             <div className="flex items-center justify-between">

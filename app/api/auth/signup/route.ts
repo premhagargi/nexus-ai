@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 })
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email }
     })
@@ -24,32 +28,33 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        ownedWorkspaces: {
-          create: {
-            name: workspaceName,
-            slug: workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6)
-          }
-        }
-      },
-      include: {
-        ownedWorkspaces: true
-      }
-    })
-    
-    // Add membership for the created workspace
-    if (user.ownedWorkspaces.length > 0) {
-      await prisma.membership.create({
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
         data: {
-          userId: user.id,
-          workspaceId: user.ownedWorkspaces[0].id,
+          email,
+          password: hashedPassword,
+        }
+      })
+
+      const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36)
+      const workspace = await tx.workspace.create({
+        data: {
+          name: workspaceName,
+          slug,
+          ownerId: newUser.id,
+        }
+      })
+
+      await tx.membership.create({
+        data: {
+          userId: newUser.id,
+          workspaceId: workspace.id,
           role: 'OWNER'
         }
       })
-    }
+
+      return newUser
+    })
 
     await setSession(user.id)
 

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { updateWorkspace, deleteWorkspace } from '@/app/actions'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
+import { Users, Mail, Send, ShieldCheck, UserPlus } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,10 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
+  // Invite states
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
+
   const handleSave = async () => {
     if (!name.trim()) return toast.error('Workspace name cannot be empty')
     setSaving(true)
@@ -47,12 +52,41 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
     }
   }
 
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inviteEmail.trim() || sendingInvite) return
+
+    setSendingInvite(true)
+    try {
+      const res = await fetch('/api/workspace/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId,
+          email: inviteEmail.trim(),
+          role: 'MEMBER',
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Invitation email sent to ${inviteEmail.trim()} via Resend!`)
+        setInviteEmail('')
+      } else {
+        toast.error(data.error || 'Failed to send invitation')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send invitation')
+    } finally {
+      setSendingInvite(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (confirmText !== initialName) return
     setDeleting(true)
     try {
       await deleteWorkspace(workspaceId)
-      // deleteWorkspace redirects server-side, but trigger a push just in case
       router.push('/dashboard')
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete workspace')
@@ -61,11 +95,11 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl pb-10">
       <div>
         <h2 className="text-3xl font-semibold tracking-tighter">Settings</h2>
         <p className="text-muted-foreground mt-1">
-          Manage workspace settings and preferences.
+          Manage workspace profile, collaboration, and preferences.
         </p>
       </div>
 
@@ -99,10 +133,49 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-red-200">
+      {/* Team Member Invitation via Resend */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-red-600">Danger Zone</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-indigo-400" />
+            Invite Teammates
+          </CardTitle>
+          <CardDescription>
+            Send email invites to join this workspace (powered by Resend & adchariot.in).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSendInvite} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Teammate Email Address</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@adchariot.in"
+                  required
+                />
+                <Button type="submit" disabled={sendingInvite || !inviteEmail.trim()}>
+                  {sendingInvite ? (
+                    <Spinner className="h-4 w-4 text-inherit" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-1.5" /> Invite
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-red-500/20 bg-red-500/5">
+        <CardHeader>
+          <CardTitle className="text-red-500">Danger Zone</CardTitle>
           <CardDescription>
             Irreversible actions. Deleting your workspace will remove all documents, chats, and tasks.
           </CardDescription>

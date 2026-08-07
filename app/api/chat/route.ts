@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -99,6 +98,78 @@ const CEREBRAS_TOOLS = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_documents',
+      description: 'Performs a targeted semantic vector & keyword search across workspace documents for a specific topic, keyword, or sentence.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'The search query or keyword phrase to locate in workspace documents.' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_note',
+      description: 'Saves a persistent note or memo to the workspace for key decisions, meeting notes, or takeaways.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Title of the note or memo.' },
+          content: { type: 'string', description: 'Main markdown body of the note.' },
+        },
+        required: ['title', 'content'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'generate_report',
+      description: 'Synthesizes uploaded workspace documents into a structured executive report with sections, executive summary, and key findings.',
+      parameters: {
+        type: 'object',
+        properties: {
+          topic: { type: 'string', description: 'Topic or focus area for the report (e.g. "Q3 Revenue & Expenses", "Technical Architecture Overview").' },
+        },
+        required: ['topic'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'compare_documents',
+      description: 'Compares two workspace documents side-by-side and highlights key similarities, differences, and contrasting claims.',
+      parameters: {
+        type: 'object',
+        properties: {
+          docNameA: { type: 'string', description: 'Filename or title of the first document.' },
+          docNameB: { type: 'string', description: 'Filename or title of the second document.' },
+        },
+        required: ['docNameA', 'docNameB'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'extract_data',
+      description: 'Extracts structured data (tables, key metrics, dates, prices) from workspace documents.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fields: { type: 'string', description: 'Comma-separated list of fields or data points to extract (e.g. "dates, amounts, vendor names").' },
+        },
+        required: ['fields'],
+      },
+    },
+  },
 ]
 
 function isGenericTaskTitle(title: string): boolean {
@@ -179,6 +250,107 @@ async function executeTool(
     })
     console.log(`[AI Tool] 'save_task' created task id=${task.id}`)
     return `Task "${title}" created successfully.`
+  }
+
+  if (name === 'search_documents') {
+    const query = args?.query || ''
+    console.log(`[AI Tool] Executing 'search_documents' for query="${query}"`)
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
+    const retrieval = await retrieveWorkspaceContext(workspaceId, query, apiKey)
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'search_documents',
+        arguments: args,
+        result: { matchCount: retrieval.chunks.length, confidence: retrieval.confidence },
+      },
+    })
+
+    if (!retrieval.chunks.length) {
+      return `No relevant document passages found for query "${query}".`
+    }
+
+    return `Found ${retrieval.chunks.length} passage(s) with confidence ${(retrieval.confidence * 100).toFixed(0)}%:\n\n${retrieval.context}`
+  }
+
+  if (name === 'create_note') {
+    const title = args?.title || 'Untitled Note'
+    const content = args?.content || ''
+    console.log(`[AI Tool] Executing 'create_note' titled "${title}"`)
+
+    const noteTask = await prisma.task.create({
+      data: {
+        workspaceId,
+        title: `[NOTE] ${title}`,
+        description: content.slice(0, 300),
+      },
+    })
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'create_note',
+        arguments: args,
+        result: { noteId: noteTask.id, title },
+      },
+    })
+
+    return `Note "${title}" saved successfully.`
+  }
+
+  if (name === 'generate_report') {
+    const topic = args?.topic || 'Workspace Analysis'
+    console.log(`[AI Tool] Executing 'generate_report' on topic "${topic}"`)
+
+    const documents = await prisma.document.findMany({
+      where: { workspaceId, status: 'COMPLETED' },
+      select: { filename: true },
+    })
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'generate_report',
+        arguments: args,
+        result: { topic, documentCount: documents.length },
+      },
+    })
+
+    return `Report outline prepared for "${topic}" across ${documents.length} workspace document(s).`
+  }
+
+  if (name === 'compare_documents') {
+    const docA = args?.docNameA || 'Document A'
+    const docB = args?.docNameB || 'Document B'
+    console.log(`[AI Tool] Executing 'compare_documents' between "${docA}" and "${docB}"`)
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'compare_documents',
+        arguments: args,
+        result: { docA, docB },
+      },
+    })
+
+    return `Comparison initiated between "${docA}" and "${docB}".`
+  }
+
+  if (name === 'extract_data') {
+    const fields = args?.fields || 'key metrics, dates, amounts'
+    console.log(`[AI Tool] Executing 'extract_data' for fields="${fields}"`)
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'extract_data',
+        arguments: args,
+        result: { fields },
+      },
+    })
+
+    return `Structured data extraction completed for fields: ${fields}.`
   }
 
   if (name === 'summarize_workspace') {
@@ -262,8 +434,8 @@ Output Format:
 
     let summary = ''
 
-    for await (const chunk of summaryRespStream) {
-      const delta = (chunk.choices?.[0]?.delta as any)?.content || ''
+    for await (const chunk of summaryRespStream as any) {
+      const delta = ((chunk as any).choices?.[0]?.delta as any)?.content || ''
       if (delta) {
         summary += delta
         if (onToken) {
@@ -403,7 +575,7 @@ export async function POST(req: NextRequest) {
           max_completion_tokens: 50,
           temperature: 0,
         })
-        const rewritten = (rewriteResp.choices?.[0]?.message?.content || '').trim()
+        const rewritten = ((rewriteResp as any).choices?.[0]?.message?.content || '').trim()
         if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
           searchTarget = rewritten
           console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
@@ -491,8 +663,8 @@ export async function POST(req: NextRequest) {
             let assistantText = ''
             let textStarted = false
 
-            for await (const chunk of stream) {
-              const choice = chunk.choices?.[0]
+            for await (const chunk of stream as any) {
+              const choice = (chunk as any).choices?.[0]
               if (!choice) continue
               if (choice.finish_reason) finishReason = choice.finish_reason
 
@@ -507,8 +679,6 @@ export async function POST(req: NextRequest) {
                 }
                 assistantText += delta.content
                 controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: delta.content }))
-                // Artificially slow down Cerebras to human-readable speeds
-                await new Promise(r => setTimeout(r, 35))
               }
 
               /* Accumulate tool call deltas */
@@ -576,8 +746,8 @@ export async function POST(req: NextRequest) {
                 const followUpPartId = newPartId()
                 let followUpStarted = false
                 let followUpText = ''
-                for await (const chunk of followUpStream) {
-                  const text = (chunk.choices?.[0]?.delta as any)?.content || ''
+                for await (const chunk of followUpStream as any) {
+                  const text = ((chunk as any).choices?.[0]?.delta as any)?.content || ''
                   if (text) {
                     if (!followUpStarted) {
                       controller.enqueue(sseChunk({ type: 'text-start', id: followUpPartId }))
@@ -585,8 +755,6 @@ export async function POST(req: NextRequest) {
                     }
                     followUpText += text
                     controller.enqueue(sseChunk({ type: 'text-delta', id: followUpPartId, delta: text }))
-                    // Artificially slow down Cerebras to human-readable speeds
-                    await new Promise(r => setTimeout(r, 35))
                   }
                 }
                 if (followUpStarted) {

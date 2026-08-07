@@ -1,6 +1,7 @@
+import { requireWorkspaceAccess } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Files, MessageSquare, CheckSquare } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import { AnalyticsDashboard } from './analytics-client'
 
 export default async function WorkspaceOverview({
   params,
@@ -8,69 +9,64 @@ export default async function WorkspaceOverview({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  
-  const [docCount, taskCount, convCount] = await Promise.all([
+  const auth = await requireWorkspaceAccess(workspaceId)
+
+  if (!auth) {
+    redirect('/dashboard')
+  }
+
+  const [
+    docCount,
+    chunkCount,
+    taskCount,
+    completedTaskCount,
+    convCount,
+    toolExecutionCount,
+    recentLogs,
+  ] = await Promise.all([
     prisma.document.count({ where: { workspaceId } }),
+    prisma.documentChunk.count({ where: { workspaceId } }),
     prisma.task.count({ where: { workspaceId } }),
+    prisma.task.count({ where: { workspaceId, completed: true } }),
     prisma.conversation.count({ where: { workspaceId } }),
+    prisma.toolExecution.count({ where: { workspaceId } }),
+    prisma.toolExecution.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        toolName: true,
+        createdAt: true,
+        result: true,
+      },
+    }),
   ])
 
+  // Mock historical trend data for Recharts area graph
+  const chartData = [
+    { name: 'Mon', documents: Math.max(0, docCount - 4), chunks: Math.max(0, chunkCount - 30), tasks: Math.max(0, taskCount - 4) },
+    { name: 'Tue', documents: Math.max(0, docCount - 3), chunks: Math.max(0, chunkCount - 20), tasks: Math.max(0, taskCount - 3) },
+    { name: 'Wed', documents: Math.max(0, docCount - 2), chunks: Math.max(0, chunkCount - 15), tasks: Math.max(0, taskCount - 2) },
+    { name: 'Thu', documents: Math.max(0, docCount - 1), chunks: Math.max(0, chunkCount - 5), tasks: Math.max(0, taskCount - 1) },
+    { name: 'Today', documents: docCount, chunks: chunkCount, tasks: taskCount },
+  ]
+
   return (
-    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 w-full">
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-b from-indigo-500/10 to-purple-500/5 p-5 border border-border/50 shadow-xl">
-        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
-          <div className="w-48 h-48 bg-indigo-500 rounded-full blur-[80px] animate-pulse"></div>
-        </div>
-        <div className="relative z-10 space-y-1.5">
-          <h2 className="text-2xl font-semibold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-            Welcome to your AI Workspace
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            A centralized hub where your team's knowledge, conversations, and automated tasks converge seamlessly.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-indigo-700">Documents</CardTitle>
-            <Files className="h-4 w-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-2xl font-semibold tracking-tighter text-foreground">{docCount}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total uploaded documents
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-purple-700">Conversations</CardTitle>
-            <MessageSquare className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-2xl font-semibold tracking-tighter text-foreground">{convCount}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total AI chats
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border hover:bg-muted/30 transition-colors shadow-sm group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
-            <CardTitle className="text-[13px] font-medium text-pink-700">Tasks</CardTitle>
-            <CheckSquare className="h-4 w-4 text-pink-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-2xl font-semibold tracking-tighter text-foreground">{taskCount}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Generated by AI tools
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <AnalyticsDashboard
+      docCount={docCount}
+      chunkCount={chunkCount}
+      taskCount={taskCount}
+      completedTaskCount={completedTaskCount}
+      convCount={convCount}
+      toolExecutionCount={toolExecutionCount}
+      recentLogs={recentLogs.map((l) => ({
+        id: l.id,
+        toolName: l.toolName,
+        createdAt: l.createdAt.toISOString(),
+        status: (l.result as any)?.status || 'success',
+      }))}
+      chartData={chartData}
+    />
   )
 }

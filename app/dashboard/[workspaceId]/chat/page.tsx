@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client'
 
 import { useChat } from '@ai-sdk/react'
@@ -315,11 +314,7 @@ function ChatInterface({
   const [input, setInput] = useState('')
   const [clearing, setClearing] = useState(false)
 
-  const { messages, sendMessage, status, stop } = useChat({
-    api: `/api/chat?workspaceId=${encodeURIComponent(workspaceId)}`,
-    body: { workspaceId },
-    // Don't use initialMessages here — we manually merge below
-  })
+  const { messages, sendMessage, status, stop } = useChat()
 
   const isLoading = status === 'streaming' || status === 'submitted'
   const bottomRef = useRef<HTMLDivElement>(null)

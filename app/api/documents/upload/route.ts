@@ -95,12 +95,30 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log(`[DocUpload] Created document record ${document.id}. Processing text extraction & vector embeddings synchronously...`)
+    console.log(`[DocUpload] Created document record ${document.id}. Dispatching job to Inngest background queue worker...`)
 
-    // Process text extraction & vector embedding synchronously
-    await processDocument(document.id, uploadData.path, workspaceId, file.name)
+    try {
+      const { inngest } = await import('@/lib/inngest/client')
+      await inngest.send({
+        name: 'document/process',
+        data: {
+          documentId: document.id,
+          workspaceId,
+          storageUrl: publicUrlData.publicUrl,
+          filename: file.name,
+          sourceType: fileExt,
+        },
+      })
+      console.log(`[DocUpload] Event "document/process" successfully published to Inngest queue.`)
+    } catch (inngestErr) {
+      console.warn('[DocUpload] Inngest queue dispatch warning, executing local fallback processing:', inngestErr)
+      // Fallback to synchronous execution if Inngest connection is unavailable
+      processDocument(document.id, uploadData.path, workspaceId, file.name).catch((err) => {
+        console.error('[DocUpload] Local background fallback processing failed:', err)
+      })
+    }
 
-    return NextResponse.json({ success: true, documentId: document.id, status: 'COMPLETED' })
+    return NextResponse.json({ success: true, documentId: document.id, status: 'PROCESSING' })
   } catch (error: any) {
     console.error('[DocUpload] POST Route Handler Error:', error)
     return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })

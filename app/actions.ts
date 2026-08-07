@@ -39,11 +39,9 @@ export async function updateWorkspace(workspaceId: string, name: string) {
   })
   if (!membership || membership.role !== 'OWNER') throw new Error('Only owners can update the workspace')
 
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6)
-
   await prisma.workspace.update({
     where: { id: workspaceId },
-    data: { name, slug }
+    data: { name }
   })
 
   revalidatePath('/dashboard', 'layout')
