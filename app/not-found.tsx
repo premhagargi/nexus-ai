@@ -59,15 +59,14 @@ export default function NotFound() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
-          <Button
-            asChild
-            className="w-full sm:w-auto px-6 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/25 transition-all"
-          >
-            <Link href="/dashboard">
+          <Link href="/dashboard" className="w-full sm:w-auto">
+            <Button
+              className="w-full sm:w-auto px-6 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/25 transition-all"
+            >
               <Home className="mr-2 h-4 w-4" />
               Return to Dashboard
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
 
         {/* Quick Links Header */}
