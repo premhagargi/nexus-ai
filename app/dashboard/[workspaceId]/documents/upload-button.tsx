@@ -149,19 +149,14 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
     setUploading(false)
 
     if (successCount > 0) {
-      toast.success(`Successfully uploaded ${successCount} document(s)! Background processing started.`)
+      toast.success(`Uploaded ${successCount} document(s)! Ingestion processing in background.`)
+      setFilesList([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setOpen(false)
       router.refresh()
     }
     if (failCount > 0) {
       toast.error(`${failCount} document(s) failed to upload.`)
-    }
-
-    if (failCount === 0) {
-      setTimeout(() => {
-        setFilesList([])
-        if (fileInputRef.current) fileInputRef.current.value = ''
-        setOpen(false)
-      }, 800)
     }
   }
 

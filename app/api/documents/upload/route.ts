@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
@@ -113,12 +113,16 @@ export async function POST(req: NextRequest) {
       console.warn('[DocUpload] Inngest queue send warning:', inngestErr)
     }
 
-    // Process document synchronously so execution completes reliably on serverless Vercel containers
-    await processDocument(document.id, uploadData.path, workspaceId, file.name)
+    // Schedule background text extraction, chunking & embedding after HTTP response is sent
+    after(async () => {
+      try {
+        await processDocument(document.id, uploadData.path, workspaceId, file.name)
+      } catch (err) {
+        console.error(`[DocUpload after background process] Error for doc ${document.id}:`, err)
+      }
+    })
 
-    const finalDoc = await prisma.document.findUnique({ where: { id: document.id } })
-
-    return NextResponse.json({ success: true, documentId: document.id, status: finalDoc?.status || 'COMPLETED' })
+    return NextResponse.json({ success: true, documentId: document.id, status: 'PROCESSING' })
   } catch (error: any) {
     console.error('[DocUpload] POST Route Handler Error:', error)
     return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 })
