@@ -464,11 +464,16 @@ export function buildContext(chunks: RetrievedChunk[], query: string) {
   const contextLines: string[] = []
 
   for (const chunk of selected) {
-    const citation = '[document]'
-    contextLines.push(`Source: ${citation}\n${chunk.content}`)
+    const filename = chunk.metadata?.sourceTitle || chunk.metadata?.filename || 'document'
+    const chunkIndex = chunk.metadata?.chunkIndex ?? '0'
+    const sourceType = chunk.metadata?.sourceType || 'text'
+
+    contextLines.push(
+      `  <document id="${chunk.id}" filename="${filename}" chunk_index="${chunkIndex}" source_type="${sourceType}">\n    ${chunk.content}\n  </document>`
+    )
   }
 
-  return contextLines.join('\n\n---\n\n')
+  return `<retrieved_context>\n${contextLines.join('\n\n')}\n</retrieved_context>`
 }
 
 export function buildSystemPrompt() {
