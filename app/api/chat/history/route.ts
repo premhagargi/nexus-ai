@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 /* ─── Auth helper ─── */
 async function authCheck(workspaceId: string) {
   const session = await getSession()
@@ -64,7 +66,10 @@ export async function GET(req: NextRequest) {
         }))
 
       console.log('[History API] Loaded', messages.length, 'messages for workspace:', workspaceId)
-      return NextResponse.json({ messages, conversationId: conversation.id })
+      const res = NextResponse.json({ messages, conversationId: conversation.id })
+      // Serve instantly from browser cache, revalidate in background after 30s
+      res.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=300')
+      return res
     } catch (dbErr: any) {
       const isConnError = dbErr?.code === 'P1001'
       const errMsg = isConnError ? 'Database connection error' : dbErr?.message || 'Query failed'
@@ -118,7 +123,9 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ message })
+    const res = NextResponse.json({ message })
+    res.headers.set('Cache-Control', 'no-store')
+    return res
   } catch (e: any) {
     console.error('[History API] POST error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -143,7 +150,9 @@ export async function DELETE(req: NextRequest) {
     })
 
     console.log(`[History API] Cleared messages for workspace ${workspaceId}`)
-    return NextResponse.json({ success: true })
+    const res = NextResponse.json({ success: true })
+    res.headers.set('Cache-Control', 'no-store')
+    return res
   } catch (e: any) {
     console.error('[History API] DELETE error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })

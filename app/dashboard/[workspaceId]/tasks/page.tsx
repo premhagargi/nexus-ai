@@ -3,6 +3,9 @@ import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { TasksClient } from './tasks-client'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function TasksPage({
   params,
 }: {
