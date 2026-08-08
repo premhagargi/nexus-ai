@@ -35,8 +35,8 @@ export interface RetrievalResult {
 
 export function normalizeText(text: string): string {
   return text
-    .replace(/\s+/g, ' ')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
