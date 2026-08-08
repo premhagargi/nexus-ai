@@ -25,9 +25,10 @@ export function matchRuleBasedRoute(queryText: string): RouteDecision | null {
 
   // 1. Casual Greetings, Farewells, and Meta Acknowledgments -> CHAT
   if (
-    /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|thx|cool|ok|okay|got\s+it|sounds\s+good|bye|who\s+are\s+you|what\s+can\s+you\s+do)(\s+there|\s+much|\s+again|\s+nexus)?[\s!.]*$/i.test(
+    /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|thx|cool|ok|okay|got\s+it|sounds\s+good|bye|who\s+are\s+you|what\s+can\s+you\s+do)($|\s+.*)/i.test(
       cleaned
-    )
+    ) &&
+    !/(document|file|pdf|report|contract|policy|q3|revenue|vacation)/i.test(cleaned)
   ) {
     return { route: 'CHAT', reason: 'Conversational greeting or acknowledgment', confidence: 1.0 }
   }
