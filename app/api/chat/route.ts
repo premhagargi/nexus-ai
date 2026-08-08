@@ -525,8 +525,8 @@ function shouldSkipRetrieval(query: string): boolean {
   const cleaned = query.toLowerCase().trim()
   if (!cleaned) return true
 
-  // 1. Conversational greetings & meta questions
-  if (/^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|who\s+are\s+you|what\s+can\s+you\s+do)[\s!.]*$/i.test(cleaned)) {
+  // 1. Conversational greetings & meta acknowledgments
+  if (/^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|thx|cool|ok|okay|got\s+it|sounds\s+good|who\s+are\s+you|what\s+can\s+you\s+do)[\s!.]*$/i.test(cleaned)) {
     return true
   }
 
@@ -537,6 +537,11 @@ function shouldSkipRetrieval(query: string): boolean {
 
   // 3. Workspace summarization requests (handled internally by summarize_workspace tool)
   if (/(summarize|summary|overview)\s+(the\s+|this\s+|all\s+)?(workspace|documents|files)/i.test(cleaned)) {
+    return true
+  }
+
+  // 4. Pure math calculations (e.g. "what is 25 * 4", "calculate 150 / 3")
+  if (/^(what\s+is\s+|calculate\s+|compute\s+)?\d+(\.\d+)?\s*[\+\-\*\/\^\%]\s*\d+(\.\d+)?$/i.test(cleaned)) {
     return true
   }
 
@@ -586,36 +591,37 @@ export async function POST(req: NextRequest) {
     const cerebras = new Cerebras({ apiKey: cerebrasApiKey })
 
     let searchTarget = queryText
+    const isUserRole = lastMessage?.role === 'user' || !lastMessage?.role
 
-    // Conversational Query Reformulation & Typo Correction
-    // Always intercept short queries (<15 words) to fix typos (e.g. wjhat), fix spacing (e.g. marketmapmaker), and resolve pronouns (e.g. it, they)
-    if (queryText.split(' ').length < 15) {
-      console.log(`[Chat API] Reformulating query for RAG: "${queryText}"`)
-      const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
-      try {
-        const rewriteResp = await cerebras.chat.completions.create({
-          model: CEREBRAS_MODEL,
-          messages: [
-            { role: 'system', content: 'You are a search query optimizer. Your job is to rewrite the final user question into a clean, standalone search query for a vector database. Resolve any pronouns (it, they, this) using the conversation history. Fix any spelling mistakes (e.g. "wjhat" -> "what") and separate concatenated words (e.g. "marketmapmaker" -> "market map maker"). Reply ONLY with the standalone search query. Do not add quotes or explanations.' },
-            { role: 'user', content: recentHistory || queryText }
-          ],
-          max_completion_tokens: 50,
-          temperature: 0,
-        })
-        const rewritten = ((rewriteResp as any).choices?.[0]?.message?.content || '').trim()
-        if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
-          searchTarget = rewritten
-          console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
-        }
-      } catch (e: any) {
-        console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
-      }
-    }
-
-    if (searchTarget && (lastMessage?.role === 'user' || !lastMessage?.role)) {
+    if (searchTarget && isUserRole) {
       if (shouldSkipRetrieval(searchTarget)) {
-        console.log(`[Chat API] Fast-path: query "${searchTarget}" matched tool/conversational pattern. Skipping RAG search.`)
+        console.log(`[Chat API] Fast-path: query "${searchTarget}" matched non-RAG pattern. Skipping query reformulation & vector search.`)
       } else {
+        // Conversational Query Reformulation & Typo Correction
+        // Only run query reformulation if we are actually proceeding with RAG retrieval!
+        if (queryText.split(' ').length < 15) {
+          console.log(`[Chat API] Reformulating query for RAG: "${queryText}"`)
+          const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
+          try {
+            const rewriteResp = await cerebras.chat.completions.create({
+              model: CEREBRAS_MODEL,
+              messages: [
+                { role: 'system', content: 'You are a search query optimizer. Your job is to rewrite the final user question into a clean, standalone search query for a vector database. Resolve any pronouns (it, they, this) using the conversation history. Fix any spelling mistakes (e.g. "wjhat" -> "what") and separate concatenated words (e.g. "marketmapmaker" -> "market map maker"). Reply ONLY with the standalone search query. Do not add quotes or explanations.' },
+                { role: 'user', content: recentHistory || queryText }
+              ],
+              max_completion_tokens: 50,
+              temperature: 0,
+            })
+            const rewritten = ((rewriteResp as any).choices?.[0]?.message?.content || '').trim()
+            if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
+              searchTarget = rewritten
+              console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
+            }
+          } catch (e: any) {
+            console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
+          }
+        }
+
         const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
         try {
           console.log(`[Chat API] Starting retrieval for workspace ${workspaceId}...`)
