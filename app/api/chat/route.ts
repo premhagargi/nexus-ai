@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { retrieveWorkspaceContext, buildSystemPrompt } from '@/lib/rag';
+import { routeQueryIntent } from '@/lib/router';
 
 export const maxDuration = 60;
 
@@ -594,43 +595,22 @@ export async function POST(req: NextRequest) {
     const isUserRole = lastMessage?.role === 'user' || !lastMessage?.role
 
     if (searchTarget && isUserRole) {
-      if (shouldSkipRetrieval(searchTarget)) {
-        console.log(`[Chat API] Fast-path: query "${searchTarget}" matched non-RAG pattern. Skipping query reformulation & vector search.`)
-      } else {
-        // Conversational Query Reformulation & Typo Correction
-        // Only run query reformulation if we are actually proceeding with RAG retrieval!
-        if (queryText.split(' ').length < 15) {
-          console.log(`[Chat API] Reformulating query for RAG: "${queryText}"`)
-          const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
-          try {
-            const rewriteResp = await cerebras.chat.completions.create({
-              model: CEREBRAS_MODEL,
-              messages: [
-                { role: 'system', content: 'You are a search query optimizer. Your job is to rewrite the final user question into a clean, standalone search query for a vector database. Resolve any pronouns (it, they, this) using the conversation history. Fix any spelling mistakes (e.g. "wjhat" -> "what") and separate concatenated words (e.g. "marketmapmaker" -> "market map maker"). Reply ONLY with the standalone search query. Do not add quotes or explanations.' },
-                { role: 'user', content: recentHistory || queryText }
-              ],
-              max_completion_tokens: 50,
-              temperature: 0,
-            })
-            const rewritten = ((rewriteResp as any).choices?.[0]?.message?.content || '').trim()
-            if (rewritten && !rewritten.toLowerCase().includes('sorry') && rewritten.length < 100) {
-              searchTarget = rewritten
-              console.log(`[Chat API] Rewrote RAG query to: "${searchTarget}"`)
-            }
-          } catch (e: any) {
-            console.warn(`[Chat API] Query rewrite failed:`, e?.message || e)
-          }
-        }
+      const recentHistory = messages.slice(-5).map((m: any) => `${m.role}: ${extractTextFromMessage(m)}`).join('\n')
+      const decision = await routeQueryIntent(searchTarget, recentHistory, cerebras)
 
+      if (decision.route === 'RAG') {
+        const ragSearchQuery = decision.searchQuery || searchTarget
         const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
         try {
-          console.log(`[Chat API] Starting retrieval for workspace ${workspaceId}...`)
-          const retrieval = await retrieveWorkspaceContext(workspaceId, searchTarget, googleApiKey)
+          console.log(`[Chat API] Executing RAG retrieval for workspace ${workspaceId} with query "${ragSearchQuery}"...`)
+          const retrieval = await retrieveWorkspaceContext(workspaceId, ragSearchQuery, googleApiKey)
           context = retrieval.context
           console.log(`[Chat API] Retrieval method=${retrieval.method} confidence=${retrieval.confidence.toFixed(2)} chunks=${retrieval.chunks.length}`)
         } catch (retrievalError: any) {
           console.error('[Chat API] Retrieval error:', retrievalError?.message || retrievalError)
         }
+      } else {
+        console.log(`[Chat API] Fast-path Intent Router bypassed RAG retrieval (route: ${decision.route}, reason: ${decision.reason})`)
       }
     }
 

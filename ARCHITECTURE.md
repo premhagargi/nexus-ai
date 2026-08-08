@@ -4,30 +4,41 @@ Nexus AI is an enterprise-grade multi-tenant RAG (Retrieval-Augmented Generation
 
 ---
 
-## 🏗️ High-Level System Architecture
+## 🏗️ Agentic Intent Router & System Architecture
+
+Rather than treating RAG as an unconditional overhead step for every user message, Nexus AI implements an **Agentic Intent Router** (`lib/router.ts`) that selectively routes queries before vector search occurs:
 
 ```mermaid
 graph TD
     Client[Next.js 16 Client / UI] <--> AuthMiddleware[Edge Auth Middleware / Jose JWT]
     AuthMiddleware <--> NextServer[Next.js App Router API Routes]
     
+    subgraph Intent Router Layer (lib/router.ts)
+        NextServer --> Router[Hybrid Intent Router]
+        Router -->|Stage 1: Rules| RuleMatch{Rule Match?}
+        RuleMatch -->|Yes: Greetings / Math / Code / Tools| FastPath[Bypass RAG -> Direct LLM / Tool]
+        RuleMatch -->|No: Ambiguous| LLMClass[Stage 2: Lightweight LLM Classifier]
+        LLMClass -->|Route: CHAT| FastPath
+        LLMClass -->|Route: RAG| RAGPipeline[Execute RAG Retrieval Pipeline]
+        LLMClass -->|Route: TOOL| ToolExec[Execute Tool Handler]
+    end
+
     subgraph Data & Storage Layer
-        NextServer <--> Prisma[Prisma ORM]
+        RAGPipeline <--> Prisma[Prisma ORM]
         Prisma <--> Postgres[(PostgreSQL + pgvector DB)]
         NextServer <--> SupabaseStorage[Supabase Object Storage]
     end
 
     subgraph RAG & AI Pipeline
-        NextServer <--> QueryOptimizer[Cerebras LLM - Query Reformulator]
-        NextServer <--> EmbeddingClient[Google GenAI - gemini-embedding-001]
-        NextServer <--> HybridSearch[pgvector Vector & TSVector Hybrid Search]
-        NextServer <--> CerebrasInference[Cerebras API - Streaming LLM + Function Calling]
+        RAGPipeline <--> EmbeddingClient[Google GenAI - gemini-embedding-001]
+        RAGPipeline <--> HybridSearch[pgvector Vector & TSVector Hybrid Search]
+        RAGPipeline <--> CerebrasInference[Cerebras API - Streaming LLM + Function Calling]
     end
 
     subgraph Async Processing & Integrations
         NextServer <--> Inngest[Inngest Event Bus & Workers]
         Inngest --> DocProcessor[Doc Ingestion: PDF / DOCX / TXT Chunking]
-        CerebrasInference --> Tools[Tool Execution: Tasks, Slack Webhooks, Reports]
+        ToolExec --> Tools[Tool Execution: Tasks, Slack Webhooks, Reports]
     end
 ```
 
@@ -54,7 +65,7 @@ This guarantees that even under arbitrary prompt injection, chunks from Workspac
 
 ---
 
-## ⚡ RAG Retrieval Engine & Optimization Pipeline
+## ⚡ Agentic Intent Routing Sequence
 
 ```mermaid
 sequenceDiagram
@@ -62,28 +73,38 @@ sequenceDiagram
     actor User
     participant UI as Next.js Chat UI
     participant API as /api/chat Endpoint
-    participant LLM_Q as Query Optimizer (Cerebras)
+    participant Router as Hybrid Intent Router (lib/router.ts)
     participant EMB as Embedder (Google GenAI)
     participant DB as Postgres pgvector
-    participant LLM_F as Inference Model (Cerebras)
+    participant LLM as Inference Model (Cerebras)
 
-    User->>UI: Types question (e.g. "wjhat is our Q3 revenue?")
+    User->>UI: Types query (e.g. "hi" vs "what does contract say about termination?")
     UI->>API: POST /api/chat { workspaceId, messages }
-    API->>LLM_Q: Reformulate & correct query spelling/pronouns
-    LLM_Q-->>API: Standalone query: "what is our Q3 revenue?"
-    API->>EMB: Generate 768-dim normalized embedding
-    EMB-->>API: Float vector [768]
-    API->>DB: Cosine Vector Search + TSVector Keyword Fallback (workspaceId scoped)
-    DB-->>API: Top-K matching document chunks + distance scores
-    API->>LLM_F: Stream prompt (System + Context + Query + Tools)
-    LLM_F-->>UI: SSE Token Stream + Tool Trigger Execution
+    API->>Router: routeQueryIntent(queryText, history)
+    
+    alt Route == CHAT or TOOL (Non-RAG Fast-Path)
+        Router-->>API: Decision: CHAT / TOOL (Bypass Vector DB)
+        API->>LLM: Stream Direct Response / Tool Execution
+    else Route == RAG (Document Grounding Required)
+        Router-->>API: Decision: RAG + Reformulated Search Query
+        API->>EMB: Generate 768-dim normalized vector embedding
+        EMB-->>API: Float vector [768]
+        API->>DB: Cosine Vector Search + TSVector Keyword Fallback (workspaceId scoped)
+        DB-->>API: Top-K matching document chunks
+        API->>LLM: Stream RAG Prompt (System + Document Context + Query)
+    end
+    
+    LLM-->>UI: SSE Token Stream + Live Citations
 ```
 
-### Key RAG Innovations:
-- **Conversational Query Reformulation**: Resolves ambiguous conversational pronouns (*"what did they say about it?"*) and corrects typos (*"wjhat"* -> *"what"*) using a lightweight pre-step LLM pass.
-- **RAG Fast-Pathing**: Skips vector retrieval entirely for greetings, meta questions, and tool action commands to save embedding API costs and reduce end-to-end latency.
-- **Hybrid Retrieval**: Combines semantic vector similarity with text matching and fuzzy Levenshtein token distance calculation for high recall.
-- **Streaming Tool Executions**: Seamlessly handles LLM tool invocation (`save_task`, `summarize_workspace`, Slack integrations) using Server-Sent Events (SSE).
+### Intent Router Categories:
+
+| Route | Criteria | Example User Query | Processing Path |
+| :--- | :--- | :--- | :--- |
+| **`CHAT`** | Greetings, general math, writing assistance, coding prompts | *"Hello"*, *"Write a python string reversal function"* | Direct Streaming LLM (Bypasses Vector Search & Embeddings) |
+| **`RAG`** | Questions grounded in uploaded workspace documents | *"What is our refund policy in Q3?"* | Vector Embedding $\rightarrow$ pgvector Cosine Search $\rightarrow$ RAG Prompt |
+| **`TOOL`** | Direct workspace actions or task triggers | *"Create a task to review budget"* | Fast-path to Tool Handler (`save_task`, `summarize_workspace`) |
+| **`CLARIFICATION`** | Ambiguous or incomplete input | *"Check it"* | Prompt LLM for clarifying user input |
 
 ---
 
@@ -91,6 +112,7 @@ sequenceDiagram
 
 | Decision | Option Selected | Rationale | Alternatives Considered |
 | :--- | :--- | :--- | :--- |
+| **Intent Orchestration** | Hybrid Router (Rules + Small LLM Classifier) | Rule-based interceptor handles 80% of obvious non-RAG queries in 0ms; lightweight LLM classifier handles ambiguous queries without wasting heavy embedding/vector search operations. | Unconditional RAG for all messages, Heavy LLM agentic loops |
 | **Authentication System** | Custom JWT via `jose` & `bcryptjs` | Completely bypasses external provider rate limits (e.g. Supabase Auth 3 signups/hr limit on free tier) allowing unlimited E2E automated Playwright testing. | Supabase Auth, NextAuth / Auth.js |
 | **Document Processing** | Next.js API Routes (`app/api/documents/upload/route.ts`) | Placing `pdf-parse` in Server Actions caused Webpack static analysis bundling failures with native Node C++ bindings (`fs` module resolution error). API routes execute natively in Node runtime without edge bundling restrictions. | Server Actions, Standalone Express Microservice |
 | **LLM Inference Provider** | Cerebras Cloud (`gpt-oss-120b`) | Ultra-fast token generation speed (>1000 tokens/sec), zero per-token cost on open tier, native support for OpenAI-compatible function calling schemas. | OpenAI GPT-4o, Anthropic Claude 3.5 Sonnet |
