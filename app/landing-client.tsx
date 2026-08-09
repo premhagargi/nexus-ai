@@ -42,7 +42,7 @@ const FEATURES: Feature[] = [
   },
   {
     icon: <Layers className="w-5 h-5" />,
-    title: "Multi-workspace isolation",
+    title: "Isolated deal rooms",
     description: "Separate knowledge bases per team, project, or client. Full data isolation with shared billing.",
     detail: "workspace.create({ isolation: 'strict' })",
   },
@@ -251,7 +251,7 @@ function WorkspaceMockup() {
         </div>
         <div className="flex-1 flex justify-center">
           <div className="text-[11px] text-muted-foreground bg-muted/50 px-3 py-0.5 rounded-md">
-            nexus — Acme Corp workspace
+            nexus — Project Apollo Data Room
           </div>
         </div>
         <div className="w-12" />
@@ -411,7 +411,7 @@ function Hero({ isAuthenticated }: { isAuthenticated?: boolean }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
             >
-              The workspace
+              The data room
               <br />
               that thinks
               <br />
@@ -512,7 +512,7 @@ function Problem() {
           </Reveal>
           <Reveal delay={0.1}>
             <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
-              Your team&apos;s knowledge is trapped
+              Your due diligence is trapped
               <span className="text-muted-foreground"> in forty different tabs.</span>
             </h2>
           </Reveal>
@@ -999,7 +999,7 @@ function Footer() {
               <span className="text-[15px] font-semibold text-foreground tracking-tighter">nexus</span>
             </div>
             <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[200px]">
-              The AI workspace for teams that take their knowledge seriously.
+              The AI data room for M&A and financial audits.
             </p>
           </div>
 

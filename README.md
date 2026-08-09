@@ -1,6 +1,6 @@
-# Nexus AI - Multi-Workspace Document Assistant
+# Nexus AI - Financial Audit & M&A Data Room
 
-A production-grade RAG (Retrieval-Augmented Generation) application with an AI assistant that answers questions grounded in uploaded workspace documents, executes autonomous tools, and guarantees strict tenant isolation.
+A production-grade RAG (Retrieval-Augmented Generation) application tailored for M&A due diligence and financial auditing, answering questions grounded in uploaded financial documents, executing autonomous tools, and guaranteeing strict deal room isolation.
 
 ---
 
@@ -46,7 +46,7 @@ sequenceDiagram
     participant DB as Postgres pgvector
     participant LLM_F as Inference Model (Cerebras)
 
-    User->>UI: Types question (e.g. "wjhat is our Q3 revenue?")
+    User->>UI: Types question (e.g. "what is the EBITDA margin in Q3?")
     UI->>API: POST /api/chat { workspaceId, messages }
     API->>LLM_Q: Reformulate & correct query spelling/pronouns
     LLM_Q-->>API: Standalone query: "what is our Q3 revenue?"
@@ -64,8 +64,8 @@ sequenceDiagram
 
 ## Key Features
 
-- **Multi-Tenant Workspaces**: Workspaces isolate all documents, conversations, tasks, and vector embeddings.
-- **Strict Isolation**: Single PostgreSQL vector store (`pgvector`) partitioned by `workspaceId` at the SQL query level:
+- **Isolated Deal Rooms (Workspaces)**: Deal rooms isolate all documents, conversations, tasks, and vector embeddings for strict M&A confidentiality.
+- **Strict Data Isolation**: Single PostgreSQL vector store (`pgvector`) partitioned by `workspaceId` at the SQL query level:
   ```sql
   WHERE "workspaceId" = ${workspaceId} ORDER BY embedding <-> ${vectorStr}::vector
   ```
@@ -73,10 +73,10 @@ sequenceDiagram
 - **RAG Hallucination Detection & Citation Verification**: Automated claim extraction and token-level grounding verification that tags response statements with a live 0–100% Grounding Score.
 - **Interactive RAG Engine Inspector**: Live architecture trace modal inside the chat interface detailing intent routing, hybrid `pgvector` Cosine Search + TSVector FTS, and MMR reranking.
 - **Autonomous AI Tooling & Sandboxed Code Execution**:
-  - `run_code_sandbox`: Evaluates mathematical formulas, data transformations, and statistical analytics in an isolated execution sandbox.
-  - `save_task`: Action item creation scoped to workspace boards.
-  - `summarize_workspace`: Multi-position document sampling & executive workspace summaries (with optional Slack webhooks).
-  - `search_documents`, `create_note`, `generate_report`, `compare_documents`, `extract_data`.
+  - `run_code_sandbox`: Evaluates financial math, calculates EBITDA, and runs statistical analytics in an isolated execution sandbox.
+  - `save_task`: Action item creation scoped to deal room boards.
+  - `summarize_workspace`: Multi-position document sampling & executive M&A deal summaries (with optional Slack webhooks).
+  - `search_documents`, `create_note`, `generate_report`, `compare_contracts`, `extract_financials`.
 - **RAG Quality Evaluation Suite**: Dedicated benchmark UI (`/dashboard/[id]/eval`) calculating Precision@K, MRR (Mean Reciprocal Rank), and distance latency metrics.
 - **Custom JWT Auth System**: Bypasses external provider rate limits using `jose` & `bcryptjs` for unrestricted end-to-end automated Playwright testing.
 

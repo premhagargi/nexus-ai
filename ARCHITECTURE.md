@@ -1,6 +1,6 @@
-# Nexus AI — System Architecture & Engineering Deep-Dive
+# Nexus AI — Financial Audit & M&A Data Room Architecture
 
-Nexus AI is an enterprise-grade multi-tenant RAG (Retrieval-Augmented Generation) document assistant built with **Next.js 16 (App Router)**, **PostgreSQL with `pgvector`**, **Cerebras Llama-3 / OSS LLMs**, **Google GenAI Embeddings**, and **Inngest** for background task execution.
+Nexus AI is an enterprise-grade multi-tenant RAG (Retrieval-Augmented Generation) document assistant built for M&A due diligence and financial audits. Built with **Next.js 16 (App Router)**, **PostgreSQL with `pgvector`**, **Cerebras Llama-3 / OSS LLMs**, **Google GenAI Embeddings**, and **Inngest** for background task execution.
 
 ---
 
