@@ -142,19 +142,42 @@ export async function embedTexts(texts: string[], apiKey: string) {
   const client = getEmbeddingClient(apiKey)
   const batches: number[][] = []
   const BATCH_SIZE = 20
+  
+  // Exponential backoff helper for rate limits
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
-    try {
-      const embeddings = await client.embedDocuments(batch)
-      embeddings.forEach((embedding) => {
-        if (Array.isArray(embedding) && embedding.length === EMBEDDING_DIMENSIONS) {
-          batches.push(normalizeEmbedding(embedding))
+    let success = false
+    let attempts = 0
+    const maxAttempts = 3
+    
+    while (!success && attempts < maxAttempts) {
+      attempts++
+      try {
+        const embeddings = await client.embedDocuments(batch)
+        embeddings.forEach((embedding, idx) => {
+          if (Array.isArray(embedding) && embedding.length === EMBEDDING_DIMENSIONS) {
+            batches.push(normalizeEmbedding(embedding))
+          } else {
+            batches.push(generateFallbackEmbedding(batch[idx]))
+          }
+        })
+        success = true
+      } catch (error: any) {
+        if (error?.status === 429 || error?.message?.includes('429')) {
+          console.warn(`[RAG] Rate limit hit on embedding batch. Retrying in ${attempts * 2} seconds...`)
+          await sleep(attempts * 2000)
         } else {
-          batches.push(generateFallbackEmbedding(batch[batches.length]))
+          console.warn('[RAG] Embedding batch failed, falling back to deterministic embeddings:', error)
+          batch.forEach((chunk) => batches.push(generateFallbackEmbedding(chunk)))
+          success = true // Skip this batch via fallback
         }
-      })
-    } catch (error) {
-      console.warn('[RAG] Embedding batch failed, falling back to deterministic embeddings:', error)
+      }
+    }
+    
+    if (!success) {
+      console.error('[RAG] Max embedding retries reached. Using fallback.')
       batch.forEach((chunk) => batches.push(generateFallbackEmbedding(chunk)))
     }
   }
@@ -220,30 +243,35 @@ export async function vectorSearchCandidates(
 ): Promise<RetrievedChunk[]> {
   const merged = new Map<string, RetrievedChunk>()
   for (const queryVector of queryVectors) {
-    const queryVectorStr = `[${queryVector.join(',')}]`
-    const rows: any[] = await prisma.$queryRawUnsafe(
-      `SELECT id, "documentId", content, metadata, embedding <-> $2::vector AS distance
-       FROM "DocumentChunk"
-       WHERE "workspaceId" = $1
-       ORDER BY embedding <-> $2::vector
-       LIMIT $3`,
-      workspaceId,
-      queryVectorStr,
-      topK,
-    )
+    try {
+      const queryVectorStr = `[${queryVector.join(',')}]`
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, "documentId", content, metadata, embedding <-> $2::vector AS distance
+         FROM "DocumentChunk"
+         WHERE "workspaceId" = $1
+         ORDER BY embedding <-> $2::vector
+         LIMIT $3`,
+        workspaceId,
+        queryVectorStr,
+        topK,
+      )
 
-    for (const row of rows) {
-      const existing = merged.get(row.id)
-      const distance = Number(row.distance ?? 9999)
-      if (!existing || distance < existing.distance) {
-        merged.set(row.id, {
-          id: row.id,
-          documentId: row.documentId,
-          content: normalizeText(row.content || ''),
-          metadata: row.metadata || {},
-          distance,
-        })
+      for (const row of rows) {
+        const existing = merged.get(row.id)
+        const distance = Number(row.distance ?? 9999)
+        if (!existing || distance < existing.distance) {
+          merged.set(row.id, {
+            id: row.id,
+            documentId: row.documentId,
+            content: normalizeText(row.content || ''),
+            metadata: row.metadata || {},
+            distance,
+          })
+        }
       }
+    } catch (error) {
+      console.error('[RAG] Vector search failed for a query variant:', error)
+      continue
     }
   }
   return Array.from(merged.values()).sort((a, b) => a.distance - b.distance)

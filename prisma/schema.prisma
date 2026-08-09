@@ -1,12 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [vector]
 }
 
@@ -17,7 +17,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  ownedWorkspaces Workspace[]  @relation("WorkspaceOwner")
   memberships     Membership[]
   documents       Document[]
 }
@@ -45,14 +45,14 @@ enum Role {
 }
 
 model Membership {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   workspaceId String
   userId      String
-  role        Role      @default(MEMBER)
-  createdAt   DateTime  @default(now())
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
 }
@@ -75,22 +75,28 @@ model Document {
   chunkCount   Int?           @default(0)
   createdAt    DateTime       @default(now())
 
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  uploader    User            @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
-  chunks      DocumentChunk[]
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader  User            @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks    DocumentChunk[]
 }
 
 model DocumentChunk {
-  id          String   @id @default(uuid())
+  id          String                     @id @default(uuid())
   workspaceId String
   documentId  String
   content     String
   embedding   Unsupported("vector(768)")
   metadata    Json?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime                   @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  document  Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // Note: For 10M+ chunks, an HNSW vector index must be created via raw SQL migration:
+  // CREATE INDEX ON "DocumentChunk" USING hnsw (embedding vector_cosine_ops);
+  // CREATE INDEX ON "DocumentChunk" USING GIN (to_tsvector('english', content));
+
+  @@index([workspaceId])
+  @@index([documentId])
 }
 
 model Conversation {
@@ -99,19 +105,19 @@ model Conversation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  messages    Message[]
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages  Message[]
 }
 
 model Message {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   conversationId String
-  role           String       // 'user', 'assistant', 'system', 'tool'
+  role           String // 'user', 'assistant', 'system', 'tool'
   content        String
   citations      Json?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime @default(now())
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
 
 model Task {
@@ -123,7 +129,7 @@ model Task {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model ToolExecution {
@@ -134,5 +140,5 @@ model ToolExecution {
   result      Json?
   createdAt   DateTime @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }

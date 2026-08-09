@@ -105,9 +105,9 @@ export function TasksClient({ initialTasks, workspaceId }: { initialTasks: Task[
             <CheckSquare className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-2xl font-semibold tracking-tighter text-foreground">Task Board</h2>
+            <h2 className="text-2xl font-semibold tracking-tighter text-foreground">Due Diligence Checklist</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Action items created manually or automatically by the AI assistant.
+              Due diligence items created manually or automatically by the M&A assistant.
             </p>
           </div>
         </div>
@@ -138,20 +138,20 @@ export function TasksClient({ initialTasks, workspaceId }: { initialTasks: Task[
             <DialogTrigger>
               <Button size="sm" className="rounded-xl shadow-sm">
                 <Plus className="h-4 w-4 mr-1.5" />
-                Add Task
+                Add Item
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <form onSubmit={handleCreateTask}>
                 <DialogHeader>
-                  <DialogTitle>Create Task</DialogTitle>
+                  <DialogTitle>Create Item</DialogTitle>
                   <DialogDescription>
-                    Add a new action item to your workspace task board.
+                    Add a new item to your deal room due diligence checklist.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="task-title">Task Title</Label>
+                    <Label htmlFor="task-title">Item Title</Label>
                     <Input
                       id="task-title"
                       value={newTitle}
@@ -176,7 +176,7 @@ export function TasksClient({ initialTasks, workspaceId }: { initialTasks: Task[
                     Cancel
                   </Button>
                   <Button type="submit" disabled={!newTitle.trim() || isCreating}>
-                    {isCreating ? 'Creating...' : 'Create Task'}
+                    {isCreating ? 'Creating...' : 'Create Item'}
                   </Button>
                 </DialogFooter>
               </form>

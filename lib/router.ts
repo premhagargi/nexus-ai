@@ -28,7 +28,7 @@ export function matchRuleBasedRoute(queryText: string): RouteDecision | null {
     /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|thanks|thank\s+you|thx|cool|ok|okay|got\s+it|sounds\s+good|bye|who\s+are\s+you|what\s+can\s+you\s+do)($|\s+.*)/i.test(
       cleaned
     ) &&
-    !/(document|file|pdf|report|contract|policy|q3|revenue|vacation)/i.test(cleaned)
+    !/(document|file|pdf|report|contract|policy|q3|revenue|vacation|ebitda|audit|diligence)/i.test(cleaned)
   ) {
     return { route: 'CHAT', reason: 'Conversational greeting or acknowledgment', confidence: 1.0 }
   }
@@ -57,13 +57,13 @@ export function matchRuleBasedRoute(queryText: string): RouteDecision | null {
     return { route: 'TOOL', reason: 'Task creation request', confidence: 0.95 }
   }
 
-  if (/(summarize|summary|overview)\s+(the\s+|this\s+|all\s+)?(workspace|documents|files)/i.test(cleaned)) {
-    return { route: 'TOOL', reason: 'Workspace summarization request', confidence: 0.95 }
+  if (/(summarize|summary|overview)\s+(the\s+|this\s+|all\s+)?(deal\s+room|workspace|documents|files|audit)/i.test(cleaned)) {
+    return { route: 'TOOL', reason: 'Deal room summarization request', confidence: 0.95 }
   }
 
   // 5. Explicit Document Grounding Keywords -> RAG
   if (
-    /(according\s+to|in\s+(the\s+)?(uploaded\s+)?(document|file|pdf|report|contract)|what\s+does\s+the\s+file\s+say|policy|vacation\s+days|q3\s+revenue)/i.test(
+    /(according\s+to|in\s+(the\s+)?(uploaded\s+)?(document|file|pdf|report|contract|10-k)|what\s+does\s+the\s+file\s+say|policy|ebitda|revenue|audit|due\s+diligence)/i.test(
       cleaned
     )
   ) {
@@ -88,13 +88,13 @@ export async function classifyIntentWithLLM(
   cerebras: InstanceType<typeof Cerebras>
 ): Promise<RouteDecision> {
   try {
-    const prompt = `System: You are an intent classifier for a enterprise document assistant.
-Analyze the user message and conversation history to determine if answering it REQUIRES searching the user's uploaded workspace documents (RAG), calling a workspace tool (TOOL), or if it can be answered directly by standard LLM knowledge/conversation (CHAT).
+    const prompt = `System: You are an intent classifier for an enterprise M&A Data Room and Financial Audit document assistant.
+Analyze the user message and conversation history to determine if answering it REQUIRES searching the user's uploaded deal room documents (RAG), calling a deal room tool (TOOL), or if it can be answered directly by standard LLM knowledge/conversation (CHAT).
 
 Routes:
-- "RAG": Requires looking up info inside the user's uploaded files/documents (e.g. contracts, policies, financial reports, specific workspace facts).
+- "RAG": Requires looking up info inside the user's uploaded files/documents (e.g. contracts, financial reports, 10-Ks, cap tables, specific M&A facts).
 - "CHAT": Conversational chat, general coding, writing assistance, general knowledge, greetings.
-- "TOOL": Creating tasks, summarizing workspace, note saving.
+- "TOOL": Creating checklist tasks, summarizing deal room, extracting financials, comparing contracts.
 - "CLARIFICATION": Ambiguous or incomplete input requiring user follow-up.
 
 USER QUERY: "${queryText}"

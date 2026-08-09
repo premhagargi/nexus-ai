@@ -227,7 +227,7 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                 <Link href={`/dashboard/${currentWorkspace?.id}/tasks`} prefetch={true} className="w-full">
                   <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/tasks`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
                     <CheckSquare className="h-[18px] w-[18px] mr-2.5" />
-                    <span className="font-medium text-[15px]">Tasks</span>
+                    <span className="font-medium text-[15px]">Due Diligence Checklist</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
