@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
           role: m.role,
           parts: [{ type: 'text', text: m.content }],
           content: m.content,
+          citations: m.citations,
         }))
 
       console.log('[History API] Loaded', messages.length, 'messages for workspace:', workspaceId)

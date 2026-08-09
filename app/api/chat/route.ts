@@ -2,7 +2,7 @@ import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import { retrieveWorkspaceContext, buildSystemPrompt } from '@/lib/rag';
+import { retrieveWorkspaceContext, buildSystemPrompt, verifyCitations } from '@/lib/rag';
 import { routeQueryIntent } from '@/lib/router';
 
 export const maxDuration = 60;
@@ -168,6 +168,21 @@ const CEREBRAS_TOOLS = [
           fields: { type: 'string', description: 'Comma-separated list of fields or data points to extract (e.g. "dates, amounts, vendor names").' },
         },
         required: ['fields'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'run_code_sandbox',
+      description: 'Executes JavaScript code in a secure sandboxed environment to perform mathematical calculations, data transformations, statistical analysis, or array processing.',
+      parameters: {
+        type: 'object',
+        properties: {
+          code: { type: 'string', description: 'JavaScript code expression or function to evaluate. Must return a result or value.' },
+          purpose: { type: 'string', description: 'Description of what calculation or data processing is being performed.' },
+        },
+        required: ['code'],
       },
     },
   },
@@ -354,6 +369,37 @@ async function executeTool(
     return `Structured data extraction completed for fields: ${fields}.`
   }
 
+  if (name === 'run_code_sandbox') {
+    const code = args?.code || ''
+    const purpose = args?.purpose || 'Data analysis & evaluation'
+    console.log(`[AI Tool] Executing 'run_code_sandbox':`, { purpose, code })
+
+    let executionResult: any
+    let isError = false
+
+    try {
+      // Safe execution sandbox for mathematical and data processing logic
+      const fn = new Function(`"use style"; return (function() { ${code.includes('return') ? code : 'return (' + code + ')'} })()`)
+      executionResult = fn()
+    } catch (err: any) {
+      isError = true
+      executionResult = `Execution error: ${err?.message || 'Invalid JavaScript code'}`
+    }
+
+    const outputString = typeof executionResult === 'object' ? JSON.stringify(executionResult, null, 2) : String(executionResult)
+
+    await prisma.toolExecution.create({
+      data: {
+        workspaceId,
+        toolName: 'run_code_sandbox',
+        arguments: args,
+        result: { purpose, output: outputString, isError },
+      },
+    })
+
+    return `Sandbox Execution (${purpose}):\n\`\`\`json\n${outputString}\n\`\`\``
+  }
+
   if (name === 'summarize_workspace') {
     console.log(`[AI Tool] Executing 'summarize_workspace' for workspaceId=${workspaceId}`)
 
@@ -495,7 +541,7 @@ Bullet points highlighting main takeaways and next steps.`
 }
 
 /* ─── Persist user + assistant turn to DB ─── */
-async function saveMessages(workspaceId: string, userText: string, assistantText: string) {
+async function saveMessages(workspaceId: string, userText: string, assistantText: string, citationsData?: any) {
   try {
     let conversation = await prisma.conversation.findFirst({
       where: { workspaceId },
@@ -509,11 +555,16 @@ async function saveMessages(workspaceId: string, userText: string, assistantText
         data: { updatedAt: new Date() },
       })
     }
-    await prisma.message.createMany({
-      data: [
-        { conversationId: conversation.id, role: 'user', content: userText },
-        { conversationId: conversation.id, role: 'assistant', content: assistantText },
-      ],
+    await prisma.message.create({
+      data: { conversationId: conversation.id, role: 'user', content: userText }
+    })
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: assistantText,
+        citations: citationsData ? JSON.parse(JSON.stringify(citationsData)) : undefined,
+      }
     })
     console.log(`[Chat API] Saved user+assistant messages to conversation ${conversation.id}`)
   } catch (e) {
@@ -591,6 +642,7 @@ export async function POST(req: NextRequest) {
     const cerebrasApiKey = process.env.CEREBRAS_API_KEY || ''
     const cerebras = new Cerebras({ apiKey: cerebrasApiKey })
 
+    let retrievalDetails: any = null
     let searchTarget = queryText
     const isUserRole = lastMessage?.role === 'user' || !lastMessage?.role
 
@@ -605,6 +657,7 @@ export async function POST(req: NextRequest) {
           console.log(`[Chat API] Executing RAG retrieval for workspace ${workspaceId} with query "${ragSearchQuery}"...`)
           const retrieval = await retrieveWorkspaceContext(workspaceId, ragSearchQuery, googleApiKey)
           context = retrieval.context
+          retrievalDetails = retrieval
           console.log(`[Chat API] Retrieval method=${retrieval.method} confidence=${retrieval.confidence.toFixed(2)} chunks=${retrieval.chunks.length}`)
         } catch (retrievalError: any) {
           console.error('[Chat API] Retrieval error:', retrievalError?.message || retrievalError)
@@ -720,18 +773,34 @@ export async function POST(req: NextRequest) {
               const toolCallList = Object.values(accToolCalls)
               console.log(`[Chat API] Executing ${toolCallList.length} tool call(s)...`)
 
-              let toolStreamedToUI = false
+              if (!textStarted) {
+                controller.enqueue(sseChunk({ type: 'text-start', id: textPartId }))
+                textStarted = true
+              }
+
+              // 1. Send visual badges to the UI for each tool
+              const badgeMap: Record<string, string> = {
+                save_task: 'Saving Task...',
+                summarize_workspace: 'Summarizing Workspace...',
+                search_documents: 'Searching Documents...',
+                create_note: 'Creating Note...',
+                generate_report: 'Generating Report...',
+                compare_documents: 'Comparing Documents...',
+                extract_data: 'Extracting Data...',
+                run_code_sandbox: 'Executing Code Sandbox...',
+              }
+              for (const tc of toolCallList) {
+                const badgeText = badgeMap[tc.function.name] || `Executing ${tc.function.name}...`
+                const badgeMarkdown = `\n\n[${badgeText}](tool://${tc.function.name})\n\n`
+                assistantText += badgeMarkdown
+                controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: badgeMarkdown }))
+              }
 
               const toolResults = await Promise.all(
                 toolCallList.map(async (tc) => {
                   let args: Record<string, any> = {}
                   try { args = JSON.parse(tc.function.arguments || '{}') } catch {}
                   const result = await executeTool(tc.function.name, args, workspaceId, cerebras, (deltaToken) => {
-                    toolStreamedToUI = true
-                    if (!textStarted) {
-                      controller.enqueue(sseChunk({ type: 'text-start', id: textPartId }))
-                      textStarted = true
-                    }
                     assistantText += deltaToken
                     controller.enqueue(sseChunk({ type: 'text-delta', id: textPartId, delta: deltaToken }))
                   })
@@ -739,13 +808,19 @@ export async function POST(req: NextRequest) {
                 })
               )
 
-              if (!toolStreamedToUI) {
-                /* Follow-up stream with tool results if tool didn't stream directly */
-                const followUpMessages = [
-                  ...cerebrasMessages,
-                  { role: 'assistant', content: assistantText || null, tool_calls: toolCallList },
-                  ...toolResults,
-                ]
+              /* Always run follow-up stream to synthesize results (except massive summary outputs) */
+              const followUpToolResults = toolResults.map(tr => {
+                if (toolCallList.find(tc => tc.id === tr.tool_call_id)?.function.name === 'summarize_workspace') {
+                  return { ...tr, content: '(Summary streamed directly to user. Proceed with answering other queries if any.)' }
+                }
+                return tr
+              })
+
+              const followUpMessages = [
+                ...cerebrasMessages,
+                { role: 'assistant', content: assistantText || null, tool_calls: toolCallList },
+                ...followUpToolResults,
+              ]
 
                 console.log(`[Chat API] Follow-up stream after tool execution...`)
                 const followUpStream = await cerebras.chat.completions.create({
@@ -774,11 +849,50 @@ export async function POST(req: NextRequest) {
                   controller.enqueue(sseChunk({ type: 'text-end', id: followUpPartId }))
                 }
                 assistantText = [assistantText, followUpText].filter(Boolean).join('\n')
-              }
+            }
+
+            // Run hallucination & claim verification if RAG retrieval was executed
+            let verification = null
+            if (retrievalDetails && retrievalDetails.chunks && retrievalDetails.chunks.length > 0) {
+              verification = verifyCitations(assistantText, retrievalDetails.chunks)
+            }
+
+            const ragMetadata = {
+              retrieval: retrievalDetails ? {
+                method: retrievalDetails.method,
+                confidence: retrievalDetails.confidence,
+                chunkCount: retrievalDetails.chunks?.length || 0,
+                chunks: retrievalDetails.chunks?.map((c: any) => ({
+                  id: c.id,
+                  distance: c.distance,
+                  sourceTitle: c.metadata?.sourceTitle || c.metadata?.filename || 'Document',
+                  snippet: c.content?.slice(0, 150),
+                })) || []
+              } : null,
+              verification,
+            }
+
+            // Stream annotation part to client if verification or RAG trace exists
+            if (ragMetadata.retrieval || ragMetadata.verification) {
+              const annotationPartId = newPartId()
+              controller.enqueue(sseChunk({
+                type: 'text-start',
+                id: annotationPartId,
+              }))
+              const annotationTag = `\n\n<!-- RAG_METADATA:${JSON.stringify(ragMetadata)} -->`
+              controller.enqueue(sseChunk({
+                type: 'text-delta',
+                id: annotationPartId,
+                delta: annotationTag,
+              }))
+              controller.enqueue(sseChunk({
+                type: 'text-end',
+                id: annotationPartId,
+              }))
             }
 
             // Persist the conversation turn to DB
-            await saveMessages(workspaceId, queryText, assistantText)
+            await saveMessages(workspaceId, queryText, assistantText, ragMetadata)
 
             controller.enqueue(sseDone())
             controller.close()

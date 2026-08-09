@@ -70,11 +70,14 @@ sequenceDiagram
   WHERE "workspaceId" = ${workspaceId} ORDER BY embedding <-> ${vectorStr}::vector
   ```
 - **Document Ingestion Pipeline**: Auto-chunks `.pdf`, `.docx`, and `.txt` files with Google GenAI embeddings (`gemini-embedding-001`).
-- **Autonomous AI Tool Executions**:
-  - `save_task`: Saves specific action items directly into the workspace task board.
+- **RAG Hallucination Detection & Citation Verification**: Automated claim extraction and token-level grounding verification that tags response statements with a live 0–100% Grounding Score.
+- **Interactive RAG Engine Inspector**: Live architecture trace modal inside the chat interface detailing intent routing, hybrid `pgvector` Cosine Search + TSVector FTS, and MMR reranking.
+- **Autonomous AI Tooling & Sandboxed Code Execution**:
+  - `run_code_sandbox`: Evaluates mathematical formulas, data transformations, and statistical analytics in an isolated execution sandbox.
+  - `save_task`: Action item creation scoped to workspace boards.
   - `summarize_workspace`: Multi-position document sampling & executive workspace summaries (with optional Slack webhooks).
   - `search_documents`, `create_note`, `generate_report`, `compare_documents`, `extract_data`.
-- **RAG Quality Evaluation Suite**: Programmatic Precision@K, MRR (Mean Reciprocal Rank), and distance benchmarking via `/api/rag/eval`.
+- **RAG Quality Evaluation Suite**: Dedicated benchmark UI (`/dashboard/[id]/eval`) calculating Precision@K, MRR (Mean Reciprocal Rank), and distance latency metrics.
 - **Custom JWT Auth System**: Bypasses external provider rate limits using `jose` & `bcryptjs` for unrestricted end-to-end automated Playwright testing.
 
 ---

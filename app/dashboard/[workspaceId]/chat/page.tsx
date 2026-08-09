@@ -11,6 +11,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { toast } from 'sonner'
 
+import { RAGArchitectureModal } from '@/components/rag-architecture-modal'
+import { ShieldCheck, Cpu, Layers, CheckCircle2, AlertTriangle, HelpCircle, FileText, Search, PlusSquare, FileBarChart, ArrowLeftRight, Database, Terminal } from 'lucide-react'
+
 /* ─── helpers ─── */
 
 function getMessageText(m: any): string {
@@ -168,6 +171,25 @@ function MarkdownContent({ content }: { content: string }) {
           return <hr className="my-6 border-border/60" />
         },
         a({ href, children }) {
+          if (href?.startsWith('tool://')) {
+            const toolName = href.replace('tool://', '')
+            let Icon = Cpu
+            if (toolName === 'save_task') Icon = PlusSquare
+            if (toolName === 'summarize_workspace') Icon = Layers
+            if (toolName === 'search_documents') Icon = Search
+            if (toolName === 'create_note') Icon = FileText
+            if (toolName === 'generate_report') Icon = FileBarChart
+            if (toolName === 'compare_documents') Icon = ArrowLeftRight
+            if (toolName === 'extract_data') Icon = Database
+            if (toolName === 'run_code_sandbox') Icon = Terminal
+            
+            return (
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/10 px-2 py-1 text-[13px] font-medium text-indigo-400 border border-indigo-500/20 my-1">
+                <Icon className="h-3.5 w-3.5 animate-pulse" />
+                {children}
+              </span>
+            )
+          }
           return (
             <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
               {children}
@@ -202,22 +224,85 @@ function TypingIndicator() {
   )
 }
 
+function CitationVerificationBadge({ citations, rawText }: { citations?: any; rawText?: string }) {
+  let meta = citations
+  if (!meta && rawText && rawText.includes('<!-- RAG_METADATA:')) {
+    try {
+      const match = rawText.match(/<!-- RAG_METADATA:(.*?) -->/)
+      if (match && match[1]) {
+        meta = JSON.parse(match[1])
+      }
+    } catch {}
+  }
+
+  if (!meta || (!meta.retrieval && !meta.verification)) return null
+
+  const verification = meta.verification
+  const retrieval = meta.retrieval
+  const groundedScore = verification?.groundedScore ?? 100
+  const isHighGrounding = groundedScore >= 80
+
+  return (
+    <div className="mt-3 p-3 rounded-xl border border-border/60 bg-muted/30 backdrop-blur-xs space-y-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold ${
+            isHighGrounding
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+          }`}>
+            {isHighGrounding ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+            {groundedScore}% Grounded & Verified
+          </span>
+          {retrieval && (
+            <span className="text-muted-foreground text-[11px] font-mono">
+              ({retrieval.chunkCount} chunk(s) retrieved via {retrieval.method})
+            </span>
+          )}
+        </div>
+      </div>
+
+      {verification?.claims && verification.claims.length > 0 && (
+        <div className="pt-1.5 border-t border-border/40 space-y-1">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
+            Claim Grounding Verification Trace:
+          </span>
+          {verification.claims.slice(0, 3).map((claim: any, idx: number) => (
+            <div key={idx} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
+              <span className={`mt-0.5 shrink-0 rounded-full h-2 w-2 ${claim.verified ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <span className="flex-1 line-clamp-1 italic">"{claim.statement}"</span>
+              {claim.sourceTitle && (
+                <span className="text-[10px] font-mono text-muted-foreground shrink-0 border border-border/50 px-1 rounded">
+                  [{claim.sourceTitle}]
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── message row ─── */
 
 function MessageRow({
   role,
   text,
+  citations,
   isLast,
   onRegenerate,
   canRegenerate,
 }: {
   role: string
   text: string
+  citations?: any
   isLast: boolean
   onRegenerate?: () => void
   canRegenerate: boolean
 }) {
   const isUser = role === 'user'
+  const cleanText = text.replace(/<!-- RAG_METADATA:.*? -->/g, '').trim()
 
   return (
     <div className={`group/row w-full py-5 ${isUser ? '' : ''}`}>
@@ -247,19 +332,19 @@ function MessageRow({
             </div>
             {isUser ? (
               <div className="whitespace-pre-wrap text-[0.9375rem] leading-7 text-foreground">
-                {text}
+                {cleanText}
               </div>
             ) : (
               <div className="text-[0.9375rem] text-foreground">
-                <MarkdownContent content={text} />
+                <MarkdownContent content={cleanText} />
+                <CitationVerificationBadge citations={citations} rawText={text} />
               </div>
             )}
 
             {/* Actions — visible on hover */}
-            {!isUser && text && (
+            {!isUser && cleanText && (
               <div className="mt-2 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity duration-150">
-                <CopyButton text={text} />
-    
+                <CopyButton text={cleanText} />
               </div>
             )}
           </div>
@@ -392,14 +477,26 @@ function ChatInterface({
     }
   }
 
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false)
+
   const showThinking =
     isLoading && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user'
 
   return (
     <div className="-mt-6 flex h-[calc(100%+1.5rem)] flex-col">
-      {/* ── Header with Clear button (aligned to far right) ── */}
-      {allMessages.length > 0 && (
-        <div className="shrink-0 flex items-center justify-end px-6 pt-2 pb-1">
+      <RAGArchitectureModal isOpen={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} />
+      
+      {/* ── Header with Clear button & RAG Inspector button ── */}
+      <div className="shrink-0 flex items-center justify-between px-6 pt-2 pb-1 border-b border-border/40 bg-muted/20">
+        <button
+          onClick={() => setIsInspectorOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 border border-indigo-500/20 transition-all cursor-pointer"
+        >
+          <Cpu className="h-3.5 w-3.5" />
+          RAG Engine Inspector
+        </button>
+
+        {allMessages.length > 0 && (
           <button
             id="clear-chat-btn"
             onClick={handleClearChat}
@@ -414,8 +511,8 @@ function ChatInterface({
             )}
             {clearing ? 'Clearing…' : 'Clear chat'}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Scrollable message area ── */}
       <div
@@ -484,6 +581,7 @@ function ChatInterface({
                   key={m.id}
                   role={m.role}
                   text={text}
+                  citations={m.citations}
                   isLast={idx === allMessages.length - 1}
                   onRegenerate={handleRegenerate}
                   canRegenerate={!isLoading}

@@ -3,7 +3,7 @@
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { Workspace } from '@prisma/client'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Files, CheckSquare, Settings, Activity, ChevronsUpDown, LogOut, Sparkles } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Files, CheckSquare, Settings, Activity, ChevronsUpDown, LogOut, Sparkles, Gauge } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuShortcut } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
@@ -236,6 +236,14 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
                   <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/logs`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
                     <Activity className="h-[18px] w-[18px] mr-2.5" />
                     <span className="font-medium text-[15px]">Tool Logs</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Link href={`/dashboard/${currentWorkspace?.id}/eval`} prefetch={true} className="w-full">
+                  <SidebarMenuButton isActive={pathname.includes(`/dashboard/${currentWorkspace?.id}/eval`)} className="rounded-xl transition-all duration-300 ease-out hover:translate-x-1 hover:bg-indigo-500/10 hover:text-indigo-300 data-[active=true]:bg-gradient-to-r data-[active=true]:from-indigo-500/20 data-[active=true]:to-purple-500/10 data-[active=true]:text-indigo-200 data-[active=true]:border-l-2 data-[active=true]:border-indigo-500 h-11 cursor-pointer w-full">
+                    <Gauge className="h-[18px] w-[18px] mr-2.5" />
+                    <span className="font-medium text-[15px]">RAG Eval & Benchmarks</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
