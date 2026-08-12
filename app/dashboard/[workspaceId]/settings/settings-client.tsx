@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { updateWorkspace, deleteWorkspace } from '@/app/actions'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
 import { Users, Mail, Send, ShieldCheck, UserPlus } from 'lucide-react'
@@ -42,7 +41,12 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
     if (!name.trim()) return toast.error('Workspace name cannot be empty')
     setSaving(true)
     try {
-      await updateWorkspace(workspaceId, name.trim())
+      const res = await fetch(`/api/workspaces/${workspaceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update workspace')
       toast.success('Workspace name updated!')
       router.refresh()
     } catch (err: any) {
@@ -58,11 +62,10 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
 
     setSendingInvite(true)
     try {
-      const res = await fetch('/api/workspace/invite', {
+      const res = await fetch(`/api/workspaces/${workspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId,
           email: inviteEmail.trim(),
           role: 'MEMBER',
         }),
@@ -73,7 +76,7 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
         toast.success(`Invitation email sent to ${inviteEmail.trim()} via Resend!`)
         setInviteEmail('')
       } else {
-        toast.error(data.error || 'Failed to send invitation')
+        toast.error(data.error || data.detail || 'Failed to send invitation')
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to send invitation')
@@ -86,7 +89,8 @@ export function SettingsClient({ workspaceId, initialName, initialSlug, ownerEma
     if (confirmText !== initialName) return
     setDeleting(true)
     try {
-      await deleteWorkspace(workspaceId)
+      const res = await fetch(`/api/workspaces/${workspaceId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to delete workspace')
       router.push('/dashboard')
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete workspace')

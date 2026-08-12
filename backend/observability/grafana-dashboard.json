@@ -1,0 +1,381 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Any Prometheus-compatible datasource that scrapes this backend's /metrics endpoint (e.g. Grafana Cloud's hosted Prometheus).",
+      "type": "datasource",
+      "pluginId": "prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "row", "name": "Row", "version": "" }
+  ],
+  "title": "Nexus AI Backend",
+  "description": "API, LLM, RAG, agent, and document-ingestion metrics from the FastAPI backend's /metrics endpoint. Every query here maps to a real Counter/Histogram defined in backend/app/observability/metrics.py and updated only from live request handling — nothing on this board is simulated.",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "tags": ["nexus-ai", "fastapi", "rag", "agent", "llm"],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "label": "Prometheus"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "API — request health",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request rate by route",
+      "description": "sum(rate(nexus_http_requests_total[5m])) by (route) — requests/sec per FastAPI route.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_http_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Error rate (5xx) %",
+      "description": "5xx responses as a percentage of total requests — the first signal something upstream (LLM, DB, RAG) is failing.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(nexus_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(nexus_http_requests_total[5m]))",
+          "legendFormat": "5xx error rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "API latency — P50 / P95 / P99",
+      "description": "histogram_quantile over nexus_http_request_duration_seconds_bucket, aggregated across all routes. Use this + the LLM/RAG/agent panels below to localize a P95 spike to a specific stage.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(nexus_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(nexus_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "P95 latency by route",
+      "description": "Same P95 calculation, broken out per route — pinpoints which endpoint is slow instead of just knowing the aggregate moved.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "LLM — Cerebras calls",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "LLM request rate by status",
+      "description": "sum(rate(nexus_llm_requests_total[5m])) by (status) — success vs. error call volume to Cerebras.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_llm_requests_total[5m])) by (status, model)",
+          "legendFormat": "{{model}} — {{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "LLM call latency — P50 / P95",
+      "description": "histogram_quantile over nexus_llm_request_duration_seconds_bucket. If this tracks the overall API P95 spike, the bottleneck is Cerebras, not our code.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(nexus_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} P95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Token throughput (prompt vs completion)",
+      "description": "sum(rate(nexus_llm_tokens_total[5m])) by (token_type) — only incremented when Cerebras actually returns a usage object, never estimated.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_llm_tokens_total[5m])) by (token_type)",
+          "legendFormat": "{{token_type}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "LLM error rate (5m)",
+      "description": "Share of LLM calls that failed in the last 5 minutes.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(nexus_llm_requests_total{status=\"error\"}[5m])) / clamp_min(sum(rate(nexus_llm_requests_total[5m])), 1e-9)",
+          "legendFormat": "error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "RAG — retrieval pipeline",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Retrieval rate by outcome",
+      "description": "sum(rate(nexus_rag_retrieval_total[5m])) by (status) — success / no_results / error.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_rag_retrieval_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Retrieval latency — P50 / P95",
+      "description": "histogram_quantile over nexus_rag_retrieval_duration_seconds_bucket — covers embedding + vector search + keyword search + rerank end to end.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(nexus_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Avg chunks retrieved per query",
+      "description": "rate(nexus_rag_retrieved_chunks_sum[5m]) / rate(nexus_rag_retrieved_chunks_count[5m]) — a sustained drop toward 0 usually means the workspace's documents aren't being matched (bad query, empty workspace, or an embedding regression).",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 43 },
+      "targets": [
+        {
+          "expr": "rate(nexus_rag_retrieved_chunks_sum[5m]) / clamp_min(rate(nexus_rag_retrieved_chunks_count[5m]), 1e-9)",
+          "legendFormat": "avg chunks"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Agent — tool-calling workflow",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 51 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Agent run rate by status",
+      "description": "sum(rate(nexus_agent_runs_total[5m])) by (status) — one \"run\" = one bounded tool-calling round + follow-up synthesis for a chat turn.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_agent_runs_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Agent run duration — P50 / P95",
+      "description": "histogram_quantile over nexus_agent_run_duration_seconds_bucket — full round-trip including every tool call plus the follow-up LLM stream.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(nexus_agent_run_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_agent_run_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Tool invocation rate by tool",
+      "description": "sum(rate(nexus_agent_tool_invocations_total[5m])) by (tool_name) — which of the 8 tools (save_task, search_documents, summarize_workspace, etc.) are actually being called.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 60 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_agent_tool_invocations_total[5m])) by (tool_name)",
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Tool failure rate by tool",
+      "description": "sum(rate(nexus_agent_tool_invocations_total{status=\"error\"}[5m])) by (tool_name) — isolates which specific tool is misbehaving instead of a generic \"agent errors\" number.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 60 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_agent_tool_invocations_total{status=\"error\"}[5m])) by (tool_name)",
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Document ingestion",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 68 },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Ingestion rate by status",
+      "description": "sum(rate(nexus_document_ingestion_total[5m])) by (status) — upload -> extract -> chunk -> embed -> store, end to end.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 69 },
+      "targets": [
+        {
+          "expr": "sum(rate(nexus_document_ingestion_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Ingestion duration — P50 / P95",
+      "description": "histogram_quantile over nexus_document_ingestion_duration_seconds_bucket. Large PDFs with many chunks show up here as high P95.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 69 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(nexus_document_ingestion_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nexus_document_ingestion_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    }
+  ]
+}

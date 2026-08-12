@@ -1,41 +1,15 @@
-import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { backendFetch } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export default async function DashboardIndexPage() {
-  const session = await getSession()
+  // GET /api/workspaces auto-provisions a default "Personal Workspace" on
+  // the backend if the user has none yet (see app/api/routes/workspaces.py),
+  // so this page just needs to redirect to whichever workspace comes back.
+  const workspaces = await backendFetch<Array<{ id: string }>>('/api/workspaces')
 
-  if (!session?.userId) {
+  if (workspaces === null) {
     redirect('/login')
   }
 
-  // Find the user's workspaces
-  const userWorkspaces = await prisma.workspace.findMany({
-    where: {
-      memberships: {
-        some: { userId: session.userId }
-      }
-    }
-  })
-
-  if (userWorkspaces.length > 0) {
-    redirect(`/dashboard/${userWorkspaces[0].id}`)
-  }
-
-  // Handle case where user has no workspaces (create a default one)
-  const newWorkspace = await prisma.workspace.create({
-    data: {
-      name: 'Personal Workspace',
-      slug: `personal-${session.userId.substring(0, 8)}`,
-      ownerId: session.userId,
-      memberships: {
-        create: {
-          userId: session.userId,
-          role: 'OWNER'
-        }
-      }
-    }
-  })
-
-  redirect(`/dashboard/${newWorkspace.id}`)
+  redirect(`/dashboard/${workspaces[0].id}`)
 }

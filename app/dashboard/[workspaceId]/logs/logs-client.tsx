@@ -1,6 +1,6 @@
 'use client'
 
-import { ToolExecution } from '@prisma/client'
+import type { ToolExecution } from '@/types/models'
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { Info, CheckCircle2, XCircle, Activity } from 'lucide-react'
 
-export function LogsClient({ logs }: { logs: any[] }) {
+export function LogsClient({ logs }: { logs: ToolExecution[] }) {
   return (
     <div className="space-y-6 pb-10">
       {/* Header */}

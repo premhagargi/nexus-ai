@@ -1,7 +1,7 @@
 'use client'
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
-import { Workspace } from '@prisma/client'
+import type { Workspace } from '@/types/models'
 import Link from 'next/link'
 import { LayoutDashboard, MessageSquare, Files, CheckSquare, Settings, Activity, ChevronsUpDown, LogOut, Sparkles, Gauge } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Field, FieldGroup } from '@/components/ui/field'
-import { createWorkspace } from '@/app/actions'
 import { Plus } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -68,16 +67,24 @@ export function AppSidebar({ workspaces, currentWorkspaceId }: { workspaces: Wor
     setNewWorkspaceName('')
 
     try {
-      const newId = await createWorkspace(name)
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create workspace')
+      const created = await res.json()
+      const newId = created.id
       setCreatedWorkspaceId(newId)
 
       startTransition(() => {
         addOptimisticWorkspace({
           id: newId,
           name,
-          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          slug: created.slug,
           ownerId: '',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
+          role: 'OWNER',
         })
       })
 

@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect, useRef, type ReactNode } from "react"
-import { motion, useScroll, useTransform, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion"
+import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion"
 import {
-  ArrowRight, FileText, MessageSquare, Sparkles, Shield, Lock, Zap,
-  Layers, Search, CheckCircle2, Database, Globe, Terminal, Plus,
-  ChevronRight, Folder, Hash, Clock, Users, Bell, Upload,
-  GitBranch, Server, Eye, Bot, Braces, ArrowUpRight, Command,
-  BookOpen, Code2, Cpu, Network, KeyRound, Fingerprint, ShieldCheck
+  ArrowRight, FileText, MessageSquare, Sparkles, Lock, Zap,
+  Layers, Search, CheckCircle2, Database, Terminal, Upload,
+  Hash, Folder, Bot, Braces, Command, BookOpen, Code2, Cpu,
+  Network, KeyRound, Eye, ShieldCheck, GitBranch, Gauge,
 } from "lucide-react"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -15,49 +14,59 @@ import {
 interface NavLink { label: string; href: string }
 interface Feature { icon: ReactNode; title: string; description: string; detail: string }
 interface WorkflowStep { label: string; description: string; icon: ReactNode }
-interface ArchNode { label: string; icon: ReactNode; x: number; y: number }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
+// Every claim on this page describes something actually implemented and
+// verified against the live application — see ARCHITECTURE.md / INTERVIEW_GUIDE.md
+// in the repo for the technical detail behind each one.
 
 const NAV_LINKS: NavLink[] = [
-  { label: "Product", href: "#product" },
-  { label: "Docs", href: "#docs" },
-  { label: "Changelog", href: "#changelog" },
-  { label: "Blog", href: "#blog" },
+  { label: "How it works", href: "#product" },
+  { label: "Under the hood", href: "#pipeline" },
+  { label: "Trust", href: "#security" },
 ]
 
 const WORKFLOW_STEPS: WorkflowStep[] = [
-  { label: "Upload", description: "Drop documents, PDFs, codebases — any knowledge source.", icon: <Upload className="w-5 h-5" /> },
-  { label: "Index", description: "Automatic chunking, embedding, and vector storage.", icon: <Database className="w-5 h-5" /> },
-  { label: "Query", description: "Natural language across your entire knowledge graph.", icon: <Search className="w-5 h-5" /> },
-  { label: "Execute", description: "AI-driven actions grounded in your team's context.", icon: <Zap className="w-5 h-5" /> },
+  { label: "Upload", description: "Drop in PDFs, DOCX, or plain text — extracted, chunked, and embedded in the background.", icon: <Upload className="w-5 h-5" /> },
+  { label: "Ask", description: "Hybrid retrieval — vector similarity plus keyword search — scoped to your workspace at the SQL level.", icon: <Search className="w-5 h-5" /> },
+  { label: "Verify", description: "Every answer is scored against its source chunks, so you can see how grounded it actually is.", icon: <ShieldCheck className="w-5 h-5" /> },
+  { label: "Act", description: "Turn an answer into a task, a note, or a report — the assistant calls real tools, not just text.", icon: <Zap className="w-5 h-5" /> },
 ]
 
 const FEATURES: Feature[] = [
   {
     icon: <MessageSquare className="w-5 h-5" />,
-    title: "Context-aware chat",
-    description: "Conversations grounded in your documents. Not hallucinated answers — cited, traceable responses.",
-    detail: "nexus.chat({ context: workspace.docs })",
+    title: "Grounded, cited answers",
+    description: "Responses stream token-by-token, then get scored sentence-by-sentence against retrieved chunks — a real grounding percentage, not a canned disclaimer.",
+    detail: "grounded_score: 100%",
   },
   {
     icon: <Layers className="w-5 h-5" />,
-    title: "Isolated deal rooms",
-    description: "Separate knowledge bases per team, project, or client. Full data isolation with shared billing.",
-    detail: "workspace.create({ isolation: 'strict' })",
+    title: "Isolated workspaces",
+    description: "Every retrieval query is scoped with a workspaceId clause inside the SQL itself. Another workspace's documents can't enter the result set — not filtered out, never fetched.",
+    detail: 'WHERE "workspaceId" = $1',
   },
   {
     icon: <Bot className="w-5 h-5" />,
-    title: "AI tool execution",
-    description: "Let the model call functions, query databases, trigger workflows — all within your security boundary.",
-    detail: "agent.execute({ tools: [...registered] })",
+    title: "Real agent tools",
+    description: "The assistant can create tasks, search documents, run sandboxed calculations, and summarize a workspace — each call logged with its arguments and result.",
+    detail: "8 tools · audited execution",
   },
   {
-    icon: <CheckCircle2 className="w-5 h-5" />,
-    title: "Intelligent task management",
-    description: "Tasks generated from conversations, auto-prioritized by context, linked to source documents.",
-    detail: "tasks.derive({ from: conversation.id })",
+    icon: <Gauge className="w-5 h-5" />,
+    title: "Built-in RAG evaluation",
+    description: "A benchmark suite computes Precision@K and Mean Reciprocal Rank against your live retrieval — not a synthetic demo dataset.",
+    detail: "Precision@K · MRR · latency",
   },
+]
+
+const ARCHITECTURE_NODES = [
+  { label: "Next.js UI", sub: "Frontend only", icon: <Code2 className="w-4 h-4" /> },
+  { label: "Session cookie", sub: "httpOnly, same-origin", icon: <KeyRound className="w-4 h-4" /> },
+  { label: "FastAPI backend", sub: "Auth · RAG · agent", icon: <Network className="w-4 h-4" /> },
+  { label: "Postgres + pgvector", sub: "Hybrid retrieval", icon: <Database className="w-4 h-4" /> },
+  { label: "Cerebras + Google", sub: "LLM & embeddings", icon: <Cpu className="w-4 h-4" /> },
+  { label: "Prometheus + OTel", sub: "Metrics, logs, traces", icon: <Eye className="w-4 h-4" /> },
 ]
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
@@ -217,22 +226,22 @@ function Navbar({ isAuthenticated }: { isAuthenticated?: boolean }) {
 
 function WorkspaceMockup() {
   const aiResponse = useTypewriter(
-    "Based on the Q3 earnings report, revenue grew 23% YoY to $4.2B. The primary driver was enterprise adoption in APAC, which accounted for 34% of new ARR. I've linked the relevant sections below.",
+    "The report cites an AI maturity score of 45 out of 100, driven primarily by fragmented tooling across practice areas.",
     30,
     2000
   )
 
   const sidebarItems = [
     { icon: <Hash className="w-3.5 h-3.5" />, label: "General", active: false },
-    { icon: <FileText className="w-3.5 h-3.5" />, label: "Q3 Earnings", active: true },
-    { icon: <Folder className="w-3.5 h-3.5" />, label: "Product Specs", active: false },
-    { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Research", active: false },
+    { icon: <FileText className="w-3.5 h-3.5" />, label: "Q3 Report", active: true },
+    { icon: <Folder className="w-3.5 h-3.5" />, label: "Contracts", active: false },
+    { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Due Diligence", active: false },
   ]
 
   const tasks = [
-    { label: "Review APAC expansion plan", done: true },
-    { label: "Update investor deck", done: false },
-    { label: "Share findings with team", done: false },
+    { label: "Review AI maturity findings", done: true },
+    { label: "Summarize practice-area risks", done: false },
+    { label: "Share with deal team", done: false },
   ]
 
   return (
@@ -251,7 +260,7 @@ function WorkspaceMockup() {
         </div>
         <div className="flex-1 flex justify-center">
           <div className="text-[11px] text-muted-foreground bg-muted/50 px-3 py-0.5 rounded-md">
-            nexus — Project Apollo Data Room
+            nexus — Deal Room
           </div>
         </div>
         <div className="w-12" />
@@ -264,7 +273,7 @@ function WorkspaceMockup() {
             <div className="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <span className="text-[9px] font-semibold text-emerald-400">A</span>
             </div>
-            <span className="text-[12px] font-medium text-zinc-300">Acme Corp</span>
+            <span className="text-[12px] font-medium text-zinc-300">Audit Workspace</span>
           </div>
 
           <div className="space-y-0.5">
@@ -274,7 +283,7 @@ function WorkspaceMockup() {
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] ${
                   item.active
                     ? "bg-muted/50 text-foreground"
-                    : "text-muted-foreground hover:text-muted-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {item.icon}
@@ -306,7 +315,7 @@ function WorkspaceMockup() {
         <div className="flex-1 flex flex-col p-4 overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <FileText className="w-4 h-4 text-muted-foreground" />
-            <span className="text-[13px] font-medium text-zinc-300">Q3 Earnings Analysis</span>
+            <span className="text-[13px] font-medium text-zinc-300">Q3 Report Analysis</span>
             <Tag>RAG</Tag>
           </div>
 
@@ -316,7 +325,7 @@ function WorkspaceMockup() {
             <div className="flex justify-end">
               <div className="bg-muted rounded-xl rounded-tr-sm px-3.5 py-2.5 max-w-[80%]">
                 <p className="text-[12px] text-foreground leading-relaxed">
-                  What were the key takeaways from our Q3 earnings report?
+                  According to the report, what&apos;s the AI maturity score?
                 </p>
               </div>
             </div>
@@ -337,15 +346,15 @@ function WorkspaceMockup() {
                     />
                   </p>
                 </div>
-                {/* Sources */}
-                <div className="flex gap-2 mt-2">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
-                    <FileText className="w-2.5 h-2.5 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground">Q3-report.pdf</span>
+                {/* Grounding + sources */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                    <span className="text-[10px] text-emerald-400">100% grounded</span>
                   </div>
                   <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
                     <FileText className="w-2.5 h-2.5 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground">apac-growth.csv</span>
+                    <span className="text-[10px] text-muted-foreground">q3-report.pdf</span>
                   </div>
                 </div>
               </div>
@@ -413,9 +422,9 @@ function Hero({ isAuthenticated }: { isAuthenticated?: boolean }) {
             >
               The data room
               <br />
-              that thinks
+              that shows its
               <br />
-              <span className="text-muted-foreground">with your team.</span>
+              <span className="text-muted-foreground">work.</span>
             </motion.h1>
 
             <motion.p
@@ -424,8 +433,8 @@ function Hero({ isAuthenticated }: { isAuthenticated?: boolean }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.35 }}
             >
-              Upload your knowledge. Ask anything. Get cited, grounded answers
-              — then turn them into tasks, workflows, and actions.
+              Upload your deal room documents. Ask anything. Every answer is retrieved
+              from your workspace, cited, and scored for how well it&apos;s actually grounded.
             </motion.p>
 
             <motion.div
@@ -435,21 +444,21 @@ function Hero({ isAuthenticated }: { isAuthenticated?: boolean }) {
               transition={{ duration: 0.7, delay: 0.5 }}
             >
               <a
-                href="/signup"
+                href={isAuthenticated ? "/dashboard" : "/signup"}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/10 text-primary text-[14px] font-medium hover:bg-white transition-colors group"
               >
-                Start building
+                {isAuthenticated ? "Go to workspace" : "Start free"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </a>
               <a
-                href="#"
+                href="#pipeline"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border text-muted-foreground text-[14px] font-medium hover:border-zinc-700 hover:text-zinc-300 transition-colors"
               >
-                Read the docs
+                See how retrieval works
               </a>
             </motion.div>
 
-            {/* API snippet */}
+            {/* Grounding snippet */}
             <motion.div
               className="mt-10 relative"
               initial={{ opacity: 0, y: 16 }}
@@ -457,17 +466,19 @@ function Hero({ isAuthenticated }: { isAuthenticated?: boolean }) {
               transition={{ duration: 0.7, delay: 0.65 }}
             >
               <div className="bg-background/80 border border-border/50 rounded-xl px-4 py-3 font-mono text-[12px] leading-relaxed max-w-md">
-                <div className="text-muted-foreground mb-1">{"// One call. Full context."}</div>
+                <div className="text-muted-foreground mb-1">{"// Every response, scored."}</div>
                 <div>
-                  <span className="text-muted-foreground">const</span>{" "}
-                  <span className="text-zinc-300">answer</span>{" "}
-                  <span className="text-muted-foreground">=</span>{" "}
-                  <span className="text-muted-foreground">await</span>{" "}
-                  <span className="text-emerald-400/80">nexus</span>
-                  <span className="text-muted-foreground">.query</span>
-                  <span className="text-muted-foreground">(</span>
-                  <span className="text-amber-300/70">{'"What drove Q3 growth?"'}</span>
-                  <span className="text-muted-foreground">)</span>
+                  <span className="text-muted-foreground">{"{"}</span>{" "}
+                  <span className="text-zinc-300">method</span>
+                  <span className="text-muted-foreground">:</span>{" "}
+                  <span className="text-amber-300/70">&quot;hybrid_vector_keyword&quot;</span>
+                  <span className="text-muted-foreground">,</span>
+                </div>
+                <div className="pl-4">
+                  <span className="text-zinc-300">grounded_score</span>
+                  <span className="text-muted-foreground">:</span>{" "}
+                  <span className="text-emerald-400/80">100</span>
+                  <span className="text-muted-foreground"> {"}"}</span>
                 </div>
               </div>
             </motion.div>
@@ -512,32 +523,35 @@ function Problem() {
           </Reveal>
           <Reveal delay={0.1}>
             <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
-              Your due diligence is trapped
-              <span className="text-muted-foreground"> in forty different tabs.</span>
+              Most AI answers ask you
+              <span className="text-muted-foreground"> to just trust them.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mt-6 text-[17px] leading-relaxed text-muted-foreground max-w-xl">
-              Documents in one tool. Chat in another. Tasks in a third. Search that finds filenames, never answers.
-              Your team re-explains the same context every day — to each other and to their tools.
+              A chatbot that summarizes a data room is easy. One where you can trust the summary
+              enough to act on it is the actual problem — and that means showing exactly which
+              document backed which sentence, not a generic disclaimer at the bottom of the reply.
             </p>
           </Reveal>
         </div>
 
         <Reveal delay={0.3}>
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="mt-16 grid sm:grid-cols-3 gap-4">
             {[
-              { n: "40%", label: "of time lost to context-switching" },
-              { n: "12+", label: "tools per knowledge worker" },
-              { n: "3.2h", label: "per day searching for information" },
-              { n: "68%", label: "of knowledge never surfaces again" },
-            ].map((stat) => (
+              { icon: <Search className="w-4 h-4" />, title: "Search finds files, not answers", body: "Keyword search tells you which document mentions a term. It can't tell you what the term means in context." },
+              { icon: <MessageSquare className="w-4 h-4" />, title: "Generic chat can't cite itself", body: "A model that just \"knows things\" can't point back to the paragraph it got an answer from — or admit it didn't find one." },
+              { icon: <GitBranch className="w-4 h-4" />, title: "Tools live in five different tabs", body: "Reading a finding and acting on it — filing a task, flagging a risk — usually means switching apps entirely." },
+            ].map((item) => (
               <div
-                key={stat.label}
+                key={item.title}
                 className="bg-background/80 border border-border/50 rounded-2xl p-5 hover:border-border transition-colors"
               >
-                <div className="text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-foreground tracking-tighter">{stat.n}</div>
-                <div className="mt-1 text-[13px] text-muted-foreground leading-snug">{stat.label}</div>
+                <div className="w-9 h-9 rounded-xl bg-muted/50 border border-border flex items-center justify-center text-muted-foreground mb-3">
+                  {item.icon}
+                </div>
+                <div className="text-[14px] font-semibold text-foreground">{item.title}</div>
+                <div className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">{item.body}</div>
               </div>
             ))}
           </div>
@@ -575,7 +589,7 @@ function Workflow() {
             </Reveal>
             <Reveal delay={0.15}>
               <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
-                Four steps. No configuration wizards, no prompt engineering, no data pipelines to maintain.
+                Four steps, every one of them visible — not a black box between your question and its answer.
               </p>
             </Reveal>
           </div>
@@ -588,7 +602,7 @@ function Workflow() {
                   className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 ${
                     active === i
                       ? "bg-background/80 border-border"
-                      : "bg-transparent border-border/50 hover:border-border/50"
+                      : "bg-transparent border-border/50 hover:border-border"
                   }`}
                   onClick={() => setActive(i)}
                   whileHover={{ x: 4 }}
@@ -648,16 +662,16 @@ function Workflow() {
 
 function RAGFlow() {
   const stages = [
-    { label: "Documents", sub: "PDF, Markdown, Code", icon: <FileText className="w-4 h-4" /> },
-    { label: "Chunking", sub: "Semantic splitting", icon: <Braces className="w-4 h-4" /> },
-    { label: "Embeddings", sub: "Vector representation", icon: <Cpu className="w-4 h-4" /> },
-    { label: "Vector store", sub: "Indexed & searchable", icon: <Database className="w-4 h-4" /> },
-    { label: "Retrieval", sub: "Context-ranked", icon: <Search className="w-4 h-4" /> },
-    { label: "Generation", sub: "Cited response", icon: <Sparkles className="w-4 h-4" /> },
+    { label: "Documents", sub: "PDF, DOCX, text", icon: <FileText className="w-4 h-4" /> },
+    { label: "Chunking", sub: "Recursive splitting", icon: <Braces className="w-4 h-4" /> },
+    { label: "Embeddings", sub: "768-dim vectors", icon: <Cpu className="w-4 h-4" /> },
+    { label: "Hybrid search", sub: "Vector + keyword", icon: <Database className="w-4 h-4" /> },
+    { label: "Rerank", sub: "Diversity-selected", icon: <Search className="w-4 h-4" /> },
+    { label: "Verify", sub: "Grounding scored", icon: <ShieldCheck className="w-4 h-4" /> },
   ]
 
   return (
-    <section className="relative py-32 lg:py-40">
+    <section className="relative py-32 lg:py-40" id="pipeline">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <Reveal>
@@ -665,15 +679,20 @@ function RAGFlow() {
           </Reveal>
           <Reveal delay={0.1}>
             <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
-              Retrieval-augmented generation,
-              <span className="text-muted-foreground"> without the plumbing.</span>
+              Hybrid retrieval,
+              <span className="text-muted-foreground"> not just vector search.</span>
             </h2>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed">
+              pgvector cosine search and Postgres full-text search run together, merged and
+              reranked — with a fuzzy fallback for typo-heavy queries neither one catches alone.
+            </p>
           </Reveal>
         </div>
 
         <Reveal delay={0.2}>
           <div className="relative">
-            {/* Connection line */}
             <div className="hidden lg:block absolute top-1/2 left-[8%] right-[8%] h-px bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 -translate-y-1/2" />
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-3">
@@ -695,46 +714,33 @@ function RAGFlow() {
           </div>
         </Reveal>
 
-        {/* Code example */}
+        {/* Real query example */}
         <Reveal delay={0.4}>
           <div className="mt-16 max-w-2xl mx-auto">
             <div className="bg-background/80 border border-border/50 rounded-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
                 <Terminal className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[11px] text-muted-foreground font-mono">query.ts</span>
+                <span className="text-[11px] text-muted-foreground font-mono">rag_service.py</span>
               </div>
               <div className="p-4 font-mono text-[12px] leading-relaxed">
                 <div>
-                  <span className="text-muted-foreground">const</span>{" "}
-                  <span className="text-zinc-300">response</span>{" "}
-                  <span className="text-muted-foreground">=</span>{" "}
-                  <span className="text-muted-foreground">await</span>{" "}
-                  <span className="text-emerald-400/80">nexus</span>
-                  <span className="text-muted-foreground">.query</span>
-                  <span className="text-muted-foreground">{"({"}</span>
-                </div>
-                <div className="pl-4">
-                  <span className="text-muted-foreground">workspace</span>
-                  <span className="text-muted-foreground">:</span>{" "}
-                  <span className="text-amber-300/70">{'"acme-corp"'}</span>
-                  <span className="text-muted-foreground">,</span>
-                </div>
-                <div className="pl-4">
-                  <span className="text-muted-foreground">question</span>
-                  <span className="text-muted-foreground">:</span>{" "}
-                  <span className="text-amber-300/70">{'"Summarize Q3 revenue by region"'}</span>
-                  <span className="text-muted-foreground">,</span>
-                </div>
-                <div className="pl-4">
-                  <span className="text-muted-foreground">citations</span>
-                  <span className="text-muted-foreground">:</span>{" "}
-                  <span className="text-purple-400/70">true</span>
-                  <span className="text-muted-foreground">,</span>
+                  <span className="text-muted-foreground">SELECT</span>{" "}
+                  <span className="text-zinc-300">id, content, embedding</span>{" "}
+                  <span className="text-muted-foreground">{"<->"}</span>{" "}
+                  <span className="text-amber-300/70">$2::vector</span>{" "}
+                  <span className="text-muted-foreground">AS distance</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">{"})"}</span>
+                  <span className="text-muted-foreground">FROM</span>{" "}
+                  <span className="text-emerald-400/80">&quot;DocumentChunk&quot;</span>
                 </div>
-                <div className="mt-2 text-muted-foreground">{"// → { answer, sources: [...], confidence: 0.94 }"}</div>
+                <div>
+                  <span className="text-muted-foreground">WHERE</span>{" "}
+                  <span className="text-zinc-300">&quot;workspaceId&quot;</span>{" "}
+                  <span className="text-muted-foreground">=</span>{" "}
+                  <span className="text-purple-400/70">$1</span>
+                </div>
+                <div className="mt-2 text-muted-foreground">{"-- isolation enforced in the query, not after it"}</div>
               </div>
             </div>
           </div>
@@ -756,8 +762,8 @@ function Features() {
         </Reveal>
         <Reveal delay={0.1}>
           <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground max-w-lg">
-            Everything you need.
-            <span className="text-muted-foreground"> Nothing you don&apos;t.</span>
+            Built to be checked,
+            <span className="text-muted-foreground"> not just trusted.</span>
           </h2>
         </Reveal>
 
@@ -765,7 +771,7 @@ function Features() {
           {FEATURES.map((feature, i) => (
             <Reveal key={feature.title} delay={0.1 + i * 0.08}>
               <motion.div
-                className="group grid md:grid-cols-[1fr,auto] items-center gap-8 p-6 md:p-8 rounded-2xl border border-border/50 hover:border-border bg-background/80 hover:bg-background/80 transition-all"
+                className="group grid md:grid-cols-[1fr,auto] items-center gap-8 p-6 md:p-8 rounded-2xl border border-border/50 hover:border-border bg-background/80 transition-all"
                 whileHover={{ x: 6 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               >
@@ -782,7 +788,7 @@ function Features() {
                 </div>
 
                 <div className="hidden md:block">
-                  <div className="bg-background border border-border/50 rounded-xl px-4 py-2.5 font-mono text-[11px] text-muted-foreground group-hover:text-muted-foreground transition-colors whitespace-nowrap">
+                  <div className="bg-background border border-border/50 rounded-xl px-4 py-2.5 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                     {feature.detail}
                   </div>
                 </div>
@@ -798,17 +804,6 @@ function Features() {
 // ─── Architecture ────────────────────────────────────────────────────────────
 
 function Architecture() {
-  const nodes = [
-    { label: "Client SDK", icon: <Code2 className="w-4 h-4" />, col: 0, row: 1 },
-    { label: "API Gateway", icon: <Globe className="w-4 h-4" />, col: 1, row: 1 },
-    { label: "Auth", icon: <KeyRound className="w-4 h-4" />, col: 1, row: 0 },
-    { label: "RAG Engine", icon: <Cpu className="w-4 h-4" />, col: 2, row: 1 },
-    { label: "Vector DB", icon: <Database className="w-4 h-4" />, col: 3, row: 0 },
-    { label: "LLM Router", icon: <Network className="w-4 h-4" />, col: 3, row: 1 },
-    { label: "Task Engine", icon: <CheckCircle2 className="w-4 h-4" />, col: 3, row: 2 },
-    { label: "Response", icon: <MessageSquare className="w-4 h-4" />, col: 4, row: 1 },
-  ]
-
   return (
     <section className="relative py-32 lg:py-40">
       <div className="max-w-7xl mx-auto px-6">
@@ -818,50 +813,40 @@ function Architecture() {
           </Reveal>
           <Reveal delay={0.1}>
             <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
-              Built for production.
-              <span className="text-muted-foreground"> Not a prototype.</span>
+              Frontend and backend,
+              <span className="text-muted-foreground"> deployed independently.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.15}>
             <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed">
-              Multi-tenant, horizontally scalable, and deployed at the edge. Every query is authenticated, encrypted, and audited.
+              A Next.js UI with zero database access, talking to a Python backend that owns
+              every retrieval, every tool call, and every metric.
             </p>
           </Reveal>
         </div>
 
         <Reveal delay={0.2}>
           <div className="bg-background/80 border border-border/50 rounded-2xl p-6 md:p-10 overflow-x-auto">
-            <div className="grid grid-cols-5 gap-x-3 gap-y-3 min-w-[600px]">
-              {Array.from({ length: 15 }, (_, idx) => {
-                const col = idx % 5
-                const row = Math.floor(idx / 5)
-                const node = nodes.find((n) => n.col === col && n.row === row)
-
-                if (!node) return <div key={idx} />
-
-                return (
+            <div className="flex items-center gap-3 min-w-[720px] justify-between">
+              {ARCHITECTURE_NODES.map((node, i) => (
+                <div key={node.label} className="flex items-center gap-3">
                   <motion.div
-                    key={node.label}
-                    className="bg-background border border-border/50 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary/20 transition-all group"
+                    className="bg-background border border-border/50 rounded-xl p-4 flex flex-col items-center gap-2 w-32 hover:border-primary/20 transition-all group"
                     whileHover={{ y: -3, transition: { type: "spring", stiffness: 400, damping: 25 } }}
                   >
                     <div className="w-9 h-9 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
                       {node.icon}
                     </div>
-                    <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center">
+                    <span className="text-[11px] font-medium text-foreground text-center leading-tight">
                       {node.label}
                     </span>
+                    <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                      {node.sub}
+                    </span>
                   </motion.div>
-                )
-              })}
-            </div>
-
-            {/* Flow arrows */}
-            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border/50">
-              {["Request", "Authenticate", "Retrieve", "Generate", "Respond"].map((step, i, arr) => (
-                <div key={step} className="flex items-center gap-2">
-                  <span className="text-[11px] text-muted-foreground font-mono">{step}</span>
-                  {i < arr.length - 1 && <ChevronRight className="w-3 h-3 text-zinc-700" />}
+                  {i < ARCHITECTURE_NODES.length - 1 && (
+                    <ArrowRight className="w-4 h-4 text-zinc-700 flex-shrink-0" />
+                  )}
                 </div>
               ))}
             </div>
@@ -872,56 +857,46 @@ function Architecture() {
   )
 }
 
-// ─── Security ────────────────────────────────────────────────────────────────
+// ─── Trust ───────────────────────────────────────────────────────────────────
 
-function Security() {
+function Trust() {
   const items = [
-    { icon: <Lock className="w-4 h-4" />, title: "End-to-end encryption", description: "AES-256 at rest, TLS 1.3 in transit. Zero plaintext storage." },
-    { icon: <Shield className="w-4 h-4" />, title: "SOC 2 Type II", description: "Audited controls for security, availability, and confidentiality." },
-    { icon: <Eye className="w-4 h-4" />, title: "Full audit trail", description: "Every query, document access, and action is logged and exportable." },
-    { icon: <Fingerprint className="w-4 h-4" />, title: "SSO & RBAC", description: "SAML, OIDC, SCIM provisioning with granular role-based access." },
-    { icon: <Server className="w-4 h-4" />, title: "Data residency", description: "Choose where your data lives. US, EU, and APAC regions available." },
-    { icon: <ShieldCheck className="w-4 h-4" />, title: "GDPR & HIPAA", description: "Built compliant from day one. BAA available for healthcare teams." },
+    { icon: <Lock className="w-4 h-4" />, title: "Workspace-scoped by design", description: "Isolation is enforced inside the SQL query itself — a WHERE workspaceId clause on every retrieval, not a filter applied after the fact." },
+    { icon: <KeyRound className="w-4 h-4" />, title: "Session-based auth", description: "JWT-backed sessions stored in an httpOnly cookie — never exposed to client-side JavaScript." },
+    { icon: <Eye className="w-4 h-4" />, title: "Tool execution audit trail", description: "Every AI tool call — task creation, document search, code execution — is logged with its arguments and result." },
+    { icon: <ShieldCheck className="w-4 h-4" />, title: "Grounding verification", description: "Responses are scored against retrieved source chunks, so you can see how much of an answer is actually backed by your documents." },
+    { icon: <Gauge className="w-4 h-4" />, title: "Request-level observability", description: "Every request carries a correlation ID through metrics, logs, and traces, so a slow or failed answer can be traced end to end." },
+    { icon: <Network className="w-4 h-4" />, title: "Independently deployable", description: "Frontend and backend ship separately — a backend fix or scale-up never requires redeploying the UI." },
   ]
 
   return (
-    <section className="relative py-32 lg:py-40">
+    <section className="relative py-32 lg:py-40" id="security">
       <DotGrid />
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="grid lg:grid-cols-[1fr,1.5fr] gap-16 items-start">
           <div>
             <Reveal>
-              <SectionLabel>Enterprise</SectionLabel>
+              <SectionLabel>Trust</SectionLabel>
             </Reveal>
             <Reveal delay={0.1}>
               <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-foreground">
-                Security is not
+                Isolation you can
                 <br />
-                <span className="text-muted-foreground">an afterthought.</span>
+                <span className="text-muted-foreground">point to in the query.</span>
               </h2>
             </Reveal>
             <Reveal delay={0.15}>
               <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
-                Built for teams that handle sensitive data. Every layer is designed with defense in depth, from authentication to storage.
+                Deal room data doesn&apos;t mix — not because of a filter applied afterward,
+                but because the isolation boundary lives in the retrieval query itself.
               </p>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <div className="mt-6 flex items-center gap-2">
-                <a
-                  href="#"
-                  className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors group"
-                >
-                  Security whitepaper
-                  <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </a>
-              </div>
             </Reveal>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             {items.map((item, i) => (
               <Reveal key={item.title} delay={0.1 + i * 0.06}>
-                <div className="group p-5 rounded-2xl border border-border/50 hover:border-border bg-background/80 hover:bg-background/80 transition-all h-full">
+                <div className="group p-5 rounded-2xl border border-border/50 hover:border-border bg-background/80 transition-all h-full">
                   <div className="w-9 h-9 rounded-xl bg-muted/50 border border-border flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors mb-3">
                     {item.icon}
                   </div>
@@ -948,12 +923,13 @@ function FinalCTA({ isAuthenticated }: { isAuthenticated?: boolean }) {
             <DotGrid />
             <div className="relative z-10 max-w-lg">
               <h2 className="text-[clamp(1.75rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-[-0.03em] text-foreground">
-                Stop searching.
+                Stop trusting.
                 <br />
-                Start knowing.
+                Start verifying.
               </h2>
               <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-                Set up your workspace in under two minutes. No credit card, no sales call. Just your documents and your questions.
+                Set up a workspace, upload a document, and ask it a question — the grounding
+                score is right there under the answer.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
@@ -963,12 +939,14 @@ function FinalCTA({ isAuthenticated }: { isAuthenticated?: boolean }) {
                   {isAuthenticated ? "Go to workspace" : "Get started free"}
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </a>
-                <a
-                  href="#"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-zinc-700 text-muted-foreground text-[14px] font-medium hover:border-zinc-600 hover:text-zinc-300 transition-colors"
-                >
-                  Talk to us
-                </a>
+                {!isAuthenticated && (
+                  <a
+                    href="/login"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-zinc-700 text-muted-foreground text-[14px] font-medium hover:border-zinc-600 hover:text-zinc-300 transition-colors"
+                  >
+                    Sign in
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -980,50 +958,30 @@ function FinalCTA({ isAuthenticated }: { isAuthenticated?: boolean }) {
 
 // ─── Footer ──────────────────────────────────────────────────────────────────
 
-function Footer() {
-  const columns = [
-    { title: "Product", links: ["Features", "Security", "Changelog", "Roadmap"] },
-    { title: "Developers", links: ["Documentation", "API Reference", "SDKs", "Status"] },
-    { title: "Company", links: ["About", "Blog", "Careers", "Contact"] },
-  ]
-
+function Footer({ isAuthenticated }: { isAuthenticated?: boolean }) {
   return (
     <footer className="border-t border-border/50">
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
-                <Network className="w-3.5 h-3.5 text-primary" />
-              </div>
-              <span className="text-[15px] font-semibold text-foreground tracking-tighter">nexus</span>
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
+              <Network className="w-3.5 h-3.5 text-primary" />
             </div>
-            <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[200px]">
-              The AI data room for M&A and financial audits.
-            </p>
+            <span className="text-[15px] font-semibold text-foreground tracking-tighter">nexus</span>
+            <span className="text-[13px] text-muted-foreground ml-2">M&amp;A due diligence, grounded.</span>
           </div>
 
-          {columns.map((col) => (
-            <div key={col.title}>
-              <div className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">{col.title}</div>
-              <ul className="space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-[13px] text-muted-foreground hover:text-zinc-300 transition-colors">{link}</a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="flex items-center gap-6">
+            <a href="#product" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">How it works</a>
+            <a href="#security" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">Trust</a>
+            <a href={isAuthenticated ? "/dashboard" : "/signup"} className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+              {isAuthenticated ? "Workspace" : "Get started"}
+            </a>
+          </div>
         </div>
 
-        <div className="mt-16 pt-6 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-[12px] text-zinc-700">© 2026 Nexus AI, Inc.</span>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">Privacy</a>
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">Terms</a>
-            <a href="#" className="text-[12px] text-zinc-700 hover:text-muted-foreground transition-colors">DPA</a>
-          </div>
+        <div className="mt-8 pt-6 border-t border-border/50">
+          <span className="text-[12px] text-zinc-700">© 2026 Nexus AI</span>
         </div>
       </div>
     </footer>
@@ -1043,9 +1001,9 @@ export default function LandingPage({ isAuthenticated }: { isAuthenticated: bool
       <RAGFlow />
       <Features />
       <Architecture />
-      <Security />
+      <Trust />
       <FinalCTA isAuthenticated={isAuthenticated} />
-      <Footer />
+      <Footer isAuthenticated={isAuthenticated} />
     </main>
   )
 }

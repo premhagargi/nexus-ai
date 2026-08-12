@@ -1,4 +1,6 @@
-import prisma from '@/lib/prisma'
+import { redirect } from 'next/navigation'
+import { backendFetch } from '@/lib/auth'
+import type { Document } from '@/types/models'
 import { DocumentsClient } from './documents-client'
 
 export const dynamic = 'force-dynamic'
@@ -10,11 +12,9 @@ export default async function DocumentsPage({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  
-  const documents = await prisma.document.findMany({
-    where: { workspaceId },
-    orderBy: { createdAt: 'desc' }
-  })
+
+  const documents = await backendFetch<Document[]>(`/api/documents?workspaceId=${workspaceId}`)
+  if (documents === null) redirect('/login')
 
   return (
     <DocumentsClient initialDocuments={documents} workspaceId={workspaceId} />

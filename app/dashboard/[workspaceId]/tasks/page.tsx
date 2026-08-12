@@ -1,6 +1,6 @@
-import { requireWorkspaceAccess } from '@/lib/auth'
-import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { backendFetch } from '@/lib/auth'
+import type { Task } from '@/types/models'
 import { TasksClient } from './tasks-client'
 
 export const dynamic = 'force-dynamic'
@@ -12,16 +12,9 @@ export default async function TasksPage({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  const auth = await requireWorkspaceAccess(workspaceId)
 
-  if (!auth) {
-    redirect('/dashboard')
-  }
-
-  const tasks = await prisma.task.findMany({
-    where: { workspaceId },
-    orderBy: { createdAt: 'desc' },
-  })
+  const tasks = await backendFetch<Task[]>(`/api/tasks?workspaceId=${workspaceId}`)
+  if (tasks === null) redirect('/login')
 
   return <TasksClient initialTasks={tasks} workspaceId={workspaceId} />
 }

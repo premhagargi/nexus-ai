@@ -1,8 +1,8 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { backendFetch } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import type { Workspace } from '@/types/models'
 
 export default async function WorkspaceLayout({
   children,
@@ -12,19 +12,14 @@ export default async function WorkspaceLayout({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  const session = await getSession()
-  if (!session?.userId) redirect('/login')
 
-  const memberships = await prisma.membership.findMany({
-    where: { userId: session.userId },
-    include: { workspace: true }
-  })
+  const workspaces = await backendFetch<Workspace[]>('/api/workspaces')
+  if (workspaces === null) redirect('/login')
 
-  const hasAccess = memberships.some(m => m.workspaceId === workspaceId)
+  const hasAccess = workspaces.some((w) => w.id === workspaceId)
   if (!hasAccess) redirect('/dashboard')
 
-  const workspaces = memberships.map(m => m.workspace)
-  const currentWorkspace = workspaces.find(w => w.id === workspaceId)
+  const currentWorkspace = workspaces.find((w) => w.id === workspaceId)
 
   return (
     <SidebarProvider>

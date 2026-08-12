@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
-import { clearSession } from '@/lib/auth'
+import { cookies } from 'next/headers'
 
+// Pure cookie plumbing, same as app/auth/session/route.ts — no DB, no
+// business logic, just clearing the httpOnly session cookie.
 export async function POST(req: Request) {
-  await clearSession()
+  const cookieStore = await cookies()
+  cookieStore.delete('session')
   return NextResponse.redirect(new URL('/login', req.url))
 }

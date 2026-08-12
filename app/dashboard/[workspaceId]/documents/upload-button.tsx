@@ -117,60 +117,23 @@ export function UploadButton({ workspaceId }: { workspaceId: string }) {
       )
 
       try {
-        let isUploaded = false
+        // Direct multipart upload to the FastAPI backend (proxied via
+        // next.config.ts rewrites). The old presigned-URL path existed to
+        // dodge Vercel's ~4.5MB Next.js API route body limit — that limit
+        // doesn't apply to this standalone backend, so one upload path is
+        // enough now.
+        const formData = new FormData()
+        formData.append('file', item.file)
+        formData.append('workspaceId', workspaceId)
 
-        // 1. Try Direct Presigned Upload (bypasses Vercel 4.5MB payload limit completely)
-        try {
-          const presignedRes = await fetch('/api/documents/presigned', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workspaceId, filename: item.file.name }),
-          })
+        const res = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        })
 
-          if (presignedRes.ok) {
-            const { signedUrl, storagePath, publicUrl } = await presignedRes.json()
-
-            // PUT raw file bytes directly to Supabase Storage signed URL
-            const uploadPutRes = await fetch(signedUrl, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': item.file.type || 'application/octet-stream',
-              },
-              body: item.file,
-            })
-
-            if (uploadPutRes.ok) {
-              // Confirm upload with server (<1KB payload)
-              const confirmRes = await fetch('/api/documents/confirm-upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ workspaceId, filename: item.file.name, storagePath, publicUrl }),
-              })
-
-              if (confirmRes.ok) {
-                isUploaded = true
-              }
-            }
-          }
-        } catch (presignedErr) {
-          console.warn(`[UploadButton] Direct presigned upload failed for ${item.file.name}, trying fallback:`, presignedErr)
-        }
-
-        // 2. Fallback to standard upload route if presigned upload didn't succeed
-        if (!isUploaded) {
-          const formData = new FormData()
-          formData.append('file', item.file)
-          formData.append('workspaceId', workspaceId)
-
-          const res = await fetch('/api/documents/upload', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!res.ok) {
-            const errData = await res.json()
-            throw new Error(errData.error || `Upload failed for ${item.file.name}`)
-          }
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || errData.detail || `Upload failed for ${item.file.name}`)
         }
 
         successCount++

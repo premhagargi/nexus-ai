@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Document } from '@prisma/client'
+import type { Document } from '@/types/models'
 import { DataTable } from './data-table'
 import { columns } from './columns'
 import { UploadDocumentButton } from './upload-button'

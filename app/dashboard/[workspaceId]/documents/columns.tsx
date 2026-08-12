@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Document } from "@prisma/client"
+import type { Document } from "@/types/models"
 import { Spinner } from "@/components/ui/spinner"
 import { useEffect, useState } from "react"
 

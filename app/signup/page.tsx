@@ -30,9 +30,15 @@ export default function SignupPage() {
         body: JSON.stringify({ email, password, workspaceName })
       })
       const data = await res.json()
-      
-      if (!res.ok) throw new Error(data.error || 'Signup failed')
-      
+
+      if (!res.ok) throw new Error(data.error || data.detail || 'Signup failed')
+
+      await fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.token }),
+      })
+
       toast.success('Account created successfully!')
       router.refresh()
       router.push('/dashboard')

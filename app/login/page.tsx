@@ -29,9 +29,17 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password })
       })
       const data = await res.json()
-      
-      if (!res.ok) throw new Error(data.error || 'Login failed')
-      
+
+      if (!res.ok) throw new Error(data.error || data.detail || 'Login failed')
+
+      // Store the backend-issued JWT in an httpOnly cookie via our own
+      // thin session route (client JS never holds the raw token).
+      await fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.token }),
+      })
+
       toast.success('Successfully logged in!')
       router.refresh()
       router.push('/dashboard')
