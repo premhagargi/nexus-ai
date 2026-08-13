@@ -227,7 +227,7 @@ async def execute_tool(
     pool: asyncpg.Pool,
     google_api_key: str,
     on_token: OnToken | None = None,
-) -> str:
+) -> tuple[str, list[rag_service.RetrievedChunk] | None]:
     start = time.perf_counter()
     status = "success"
     with span("agent.tool_invocation", **{"tool.name": name, "workspace_id": workspace_id}):
@@ -250,7 +250,7 @@ async def _dispatch_tool(
     pool: asyncpg.Pool,
     google_api_key: str,
     on_token: OnToken | None,
-) -> str:
+) -> tuple[str, list[rag_service.RetrievedChunk] | None]:
     if name == "save_task":
         raw_title = args.get("title") or args.get("task") or args.get("name") or ""
         title = str(raw_title).strip()
@@ -261,7 +261,7 @@ async def _dispatch_tool(
             return (
                 "Task creation was not completed because no specific task title or topic was provided. "
                 'Please ask the user: "What specific task would you like me to create? Please provide a title or topic."'
-            )
+            ), None
 
         task_id = str(uuid.uuid4())
         now = now_naive_utc()
@@ -273,7 +273,7 @@ async def _dispatch_tool(
         await _log_tool_execution(
             pool, workspace_id, "save_task", args, {"taskId": task_id, "status": "success", "title": title}
         )
-        return f'Task "{title}" created successfully.'
+        return f'Task "{title}" created successfully.', None
 
     if name == "search_documents":
         query = args.get("query", "")
@@ -283,8 +283,11 @@ async def _dispatch_tool(
             {"matchCount": len(retrieval.chunks), "confidence": retrieval.confidence},
         )
         if not retrieval.chunks:
-            return f'No relevant document passages found for query "{query}".'
-        return f"Found {len(retrieval.chunks)} passage(s) with confidence {retrieval.confidence * 100:.0f}%:\n\n{retrieval.context}"
+            return f'No relevant document passages found for query "{query}".', None
+        return (
+            f"Found {len(retrieval.chunks)} passage(s) with confidence {retrieval.confidence * 100:.0f}%:\n\n{retrieval.context}",
+            retrieval.chunks,
+        )
 
     if name == "create_note":
         title = args.get("title", "Untitled Note")
@@ -297,24 +300,24 @@ async def _dispatch_tool(
             note_id, workspace_id, f"[NOTE] {title}", content[:300], now,
         )
         await _log_tool_execution(pool, workspace_id, "create_note", args, {"noteId": note_id, "title": title})
-        return f'Note "{title}" saved successfully.'
+        return f'Note "{title}" saved successfully.', None
 
     if name == "generate_report":
         topic = args.get("topic", "Workspace Analysis")
         rows = await pool.fetch('SELECT filename FROM "Document" WHERE "workspaceId" = $1 AND status = $2', workspace_id, "COMPLETED")
         await _log_tool_execution(pool, workspace_id, "generate_report", args, {"topic": topic, "documentCount": len(rows)})
-        return f'Report outline prepared for "{topic}" across {len(rows)} workspace document(s).'
+        return f'Report outline prepared for "{topic}" across {len(rows)} workspace document(s).', None
 
     if name == "compare_documents":
         doc_a = args.get("docNameA", "Document A")
         doc_b = args.get("docNameB", "Document B")
         await _log_tool_execution(pool, workspace_id, "compare_documents", args, {"docA": doc_a, "docB": doc_b})
-        return f'Comparison initiated between "{doc_a}" and "{doc_b}".'
+        return f'Comparison initiated between "{doc_a}" and "{doc_b}".', None
 
     if name == "extract_data":
         fields = args.get("fields", "key metrics, dates, amounts")
         await _log_tool_execution(pool, workspace_id, "extract_data", args, {"fields": fields})
-        return f"Structured data extraction completed for fields: {fields}."
+        return f"Structured data extraction completed for fields: {fields}.", None
 
     if name == "run_code_sandbox":
         code = args.get("code", "")
@@ -324,28 +327,29 @@ async def _dispatch_tool(
         await _log_tool_execution(
             pool, workspace_id, "run_code_sandbox", args, {"purpose": purpose, "output": output_string, "isError": is_error}
         )
-        return f"Sandbox Execution ({purpose}):\n```json\n{output_string}\n```"
+        return f"Sandbox Execution ({purpose}):\n```json\n{output_string}\n```", None
 
     if name == "summarize_workspace":
         return await _summarize_workspace(args, workspace_id, pool, on_token)
 
-    return f"Unknown tool: {name}"
+    return f"Unknown tool: {name}", None
 
 
 async def _summarize_workspace(
     args: dict[str, Any], workspace_id: str, pool: asyncpg.Pool, on_token: OnToken | None
-) -> str:
+) -> tuple[str, list[rag_service.RetrievedChunk] | None]:
     documents = await pool.fetch(
         'SELECT id, filename FROM "Document" WHERE "workspaceId" = $1 AND status = $2 ORDER BY "createdAt" ASC',
         workspace_id, "COMPLETED",
     )
     if not documents:
-        return "No completed documents found in workspace to summarize."
+        return "No completed documents found in workspace to summarize.", None
 
     total_char_budget = 20000
     per_doc_char_budget = max(1500, total_char_budget // len(documents))
 
     doc_summaries: list[dict[str, str]] = []
+    grounding_chunks: list[rag_service.RetrievedChunk] = []
     total_sampled_chars = 0
 
     for doc in documents:
@@ -376,9 +380,21 @@ async def _summarize_workspace(
 
         doc_summaries.append({"name": doc["filename"], "content": doc_text})
         total_sampled_chars += len(doc_text)
+        # The verifier checks the generated summary against exactly the text
+        # actually shown to the LLM, not a fresh unrelated retrieval - this
+        # is what fixed the "8% grounded" false-negative on workspace summaries.
+        grounding_chunks.append(
+            rag_service.RetrievedChunk(
+                id=f"summarize:{doc['id']}",
+                document_id=doc["id"],
+                content=doc_text,
+                metadata={"sourceTitle": rag_service.build_source_title(doc["filename"]), "filename": doc["filename"]},
+                distance=0.0,
+            )
+        )
 
     if not doc_summaries:
-        return "No document text content found to summarize."
+        return "No document text content found to summarize.", None
 
     doc_names_index = "\n".join(f'{i + 1}. "{d["name"]}"' for i, d in enumerate(doc_summaries))
     formatted_docs = "\n\n----------------------------------------\n\n".join(
@@ -446,4 +462,4 @@ Bullet points highlighting main takeaways and next steps."""
     if args.get("sendToSlack"):
         await send_to_slack_webhook(summary)
 
-    return summary
+    return summary, grounding_chunks

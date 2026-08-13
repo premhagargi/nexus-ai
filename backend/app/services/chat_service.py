@@ -266,6 +266,17 @@ async def stream_chat_response(
                         yield piece
                 assistant_text = text_holder.text
 
+                if text_holder.grounding_chunks:
+                    # A tool (e.g. summarize_workspace) supplied the real source
+                    # material it used - verify against that, not the stale
+                    # pre-routing RAG retrieval, which may be unrelated.
+                    retrieval_details = rag_service.RetrievalResult(
+                        context="",
+                        chunks=text_holder.grounding_chunks,
+                        confidence=1.0,
+                        method="tool_context",
+                    )
+
             verification = None
             if retrieval_details and retrieval_details.chunks:
                 verification = rag_service.verify_citations(assistant_text, retrieval_details.chunks)
@@ -309,12 +320,19 @@ class _TextHolder:
     below is an async generator that must yield SSE bytes as it streams, so
     it can't also `return` its final text — the caller reads `.text` after
     the generator is exhausted instead.
+
+    `grounding_chunks` piggybacks on the same pattern: when a tool call
+    (e.g. summarize_workspace) supplies the real source material it used,
+    the caller substitutes it for the pre-routing RAG retrieval before
+    running citation verification, instead of checking the tool's answer
+    against whatever unrelated chunks the original query happened to match.
     """
 
-    __slots__ = ("text",)
+    __slots__ = ("text", "grounding_chunks")
 
     def __init__(self, initial: str = "") -> None:
         self.text = initial
+        self.grounding_chunks: list[rag_service.RetrievedChunk] | None = None
 
 
 async def _run_agent_tool_round(
@@ -354,8 +372,16 @@ async def _run_agent_tool_round(
         async def on_token(delta: str) -> None:
             streamed_tokens.append(delta)
 
-        result = await execute_tool(tc["function"]["name"], args, workspace_id, pool, google_api_key, on_token)
-        return {"tool_call_id": tc["id"], "role": "tool", "content": result, "streamed": streamed_tokens}
+        content, grounding_chunks = await execute_tool(
+            tc["function"]["name"], args, workspace_id, pool, google_api_key, on_token
+        )
+        return {
+            "tool_call_id": tc["id"],
+            "role": "tool",
+            "content": content,
+            "streamed": streamed_tokens,
+            "grounding_chunks": grounding_chunks,
+        }
 
     agent_status = "success"
     try:
@@ -370,6 +396,8 @@ async def _run_agent_tool_round(
         for token in tr["streamed"]:
             holder.text += token
             yield sse_chunk({"type": "text-delta", "id": text_part_id, "delta": token})
+        if tr["grounding_chunks"]:
+            holder.grounding_chunks = tr["grounding_chunks"]
 
     yield sse_chunk({"type": "text-end", "id": text_part_id})
 

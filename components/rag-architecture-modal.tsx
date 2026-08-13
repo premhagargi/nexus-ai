@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Layers, Database, Search, Cpu, CheckCircle2, ShieldCheck, Sparkles, Network, ArrowRight } from 'lucide-react'
+import { Layers, Database, Cpu, CheckCircle2, ShieldCheck, Sparkles, Network, XIcon } from 'lucide-react'
 
 export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [activeStep, setActiveStep] = useState(0)
@@ -42,20 +42,33 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl bg-card/95 backdrop-blur-xl border-border/80 text-foreground rounded-2xl shadow-2xl overflow-hidden p-0">
-        <div className="relative bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-background p-6 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-            <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" /> Architecture & Engine Trace
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-2xl lg:max-w-3xl max-h-[85vh] flex flex-col bg-card border-border text-foreground rounded-xl shadow-xl overflow-hidden p-0 gap-0"
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-border">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5" /> Architecture & Engine Trace
+            </div>
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+              RAG Pipeline Inspector
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              How a query moves through retrieval, reranking, and grounding verification.
+            </DialogDescription>
           </div>
-          <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Nexus AI RAG Pipeline Architecture
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Production-grade Retrieval-Augmented Generation with strict tenant isolation and live grounding checks.
-          </DialogDescription>
+          <DialogClose
+            render={<Button variant="ghost" size="icon-sm" className="shrink-0" />}
+          >
+            <XIcon className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        {/* Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
           {/* Step Selector Tabs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {steps.map((step, idx) => {
@@ -65,39 +78,39 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
                 <button
                   key={idx}
                   onClick={() => setActiveStep(idx)}
-                  className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                  className={`flex flex-col items-start gap-2 p-3 rounded-lg border text-left transition-colors ${
                     isActive
-                      ? 'border-indigo-500 bg-indigo-500/10 shadow-md shadow-indigo-500/5'
-                      : 'border-border/60 bg-muted/20 hover:bg-muted/50 hover:border-border'
+                      ? 'border-indigo-500/50 bg-indigo-500/[0.07]'
+                      : 'border-border bg-muted/20 hover:bg-muted/40'
                   }`}
                 >
-                  <div className={`p-2 rounded-lg bg-gradient-to-br ${step.color} text-white mb-2 shadow-sm`}>
-                    <Icon className="h-4 w-4" />
+                  <div className={`p-1.5 rounded-md bg-gradient-to-br ${step.color} text-white shadow-sm`}>
+                    <Icon className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold line-clamp-1">{step.title}</span>
+                  <span className="text-xs font-semibold leading-snug line-clamp-2">{step.title}</span>
                 </button>
               )
             })}
           </div>
 
           {/* Step Detail Card */}
-          <div className="p-5 rounded-2xl border border-border/60 bg-muted/20 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+          <div className="p-4 rounded-lg border border-border bg-muted/20 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-bold text-foreground">
                 {steps[activeStep].title}
               </h3>
-              <Badge variant="outline" className="border-indigo-500/30 text-indigo-400 bg-indigo-500/5">
-                Step {activeStep + 1} of 4
+              <Badge variant="outline" className="shrink-0 border-indigo-500/30 text-indigo-500 dark:text-indigo-400 bg-indigo-500/5">
+                Step {activeStep + 1} of {steps.length}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {steps[activeStep].description}
             </p>
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               {steps[activeStep].tech.map((t, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-md bg-card border border-border/80 text-xs font-mono text-foreground/80 shadow-xs"
+                  className="px-2 py-1 rounded-md bg-card border border-border text-xs font-mono text-foreground/80"
                 >
                   {t}
                 </span>
@@ -106,12 +119,12 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
           </div>
 
           {/* Code & Vector Spec Preview */}
-          <div className="rounded-xl border border-border/60 bg-[#181825] p-4 font-mono text-xs text-indigo-200/90 leading-relaxed overflow-x-auto">
+          <div className="rounded-lg border border-border bg-[#181825] p-4 font-mono text-xs text-indigo-200/90 leading-relaxed overflow-x-auto">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-white/50">
               <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
                 <Network className="h-3.5 w-3.5 text-indigo-400" /> PostgreSQL Vector & Tenant Isolation SQL
               </span>
-              <span className="text-[10px] text-emerald-400 font-bold">pgvector 0.3.0</span>
+              <span className="text-[10px] text-emerald-400 font-semibold">pgvector 0.3.0</span>
             </div>
             <pre className="text-[11px] leading-5 text-indigo-300">
 {`-- Partitioned Cosine Vector Search
@@ -124,12 +137,13 @@ LIMIT 8;`}
           </div>
         </div>
 
-        <div className="p-4 border-t border-border/50 bg-muted/10 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Multi-tenant workspace isolation guaranteed
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-t border-border bg-muted/10">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Multi-tenant workspace isolation guaranteed
           </div>
-          <Button variant="outline" size="sm" onClick={onClose} className="rounded-xl">
-            Close Inspector
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
           </Button>
         </div>
       </DialogContent>
