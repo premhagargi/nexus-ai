@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Send, Bot, User, Copy, Check, RefreshCw, Square, Trash2 } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { useEffect, useRef, use, useState, useCallback, useLayoutEffect } from 'react'
+import { useQuery, useQueryClient, useIsRestoring } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -391,15 +392,26 @@ function ChatInterface({
   workspaceId,
   initialMessages,
   onHistoryCleared,
+  onMessageFinished,
 }: {
   workspaceId: string
   initialMessages: any[]
   onHistoryCleared: () => void
+  onMessageFinished: () => void
 }) {
   const [input, setInput] = useState('')
   const [clearing, setClearing] = useState(false)
 
-  const { messages, sendMessage, status, stop } = useChat()
+  const { messages, sendMessage, status, stop } = useChat({
+    // The backend persists both turns of a completed exchange to Postgres as
+    // it streams (see chat_service.py's _save_messages). Marking the cached
+    // history stale here — rather than on a timer — means the moment this
+    // component next mounts (nav away and back), it picks up the new turn
+    // instead of serving a snapshot that's missing it.
+    onFinish: () => {
+      onMessageFinished()
+    },
+  })
 
   const isLoading = status === 'streaming' || status === 'submitted'
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -669,83 +681,61 @@ function ChatInterface({
    OUTER: ChatPage (loads history, shows skeleton)
    ════════════════════════════════════════════ */
 
-export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
-  const { workspaceId } = use(params)
-  const [historyLoaded, setHistoryLoaded] = useState(false)
-  const [initialMessages, setInitialMessages] = useState<any[]>([])
-  // Key forces ChatInterface to fully re-mount after clearing
-  const [chatKey, setChatKey] = useState(0)
+type ChatHistoryResponse = { messages: any[]; conversationId?: string }
 
-  const CACHE_KEY = `nexus_chat_history_${workspaceId}`
-
-  const fetchHistory = useCallback((forceRefresh = false) => {
-    // Serve from sessionStorage cache instantly
-    if (!forceRefresh) {
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY)
-        if (cached) {
-          const { messages, ts } = JSON.parse(cached)
-          const AGE_MS = Date.now() - ts
-          // Serve cache immediately if < 5 minutes old
-          if (AGE_MS < 5 * 60 * 1000 && Array.isArray(messages)) {
-            setInitialMessages(messages)
-            setHistoryLoaded(true)
-            // Still revalidate in background silently
-            fetchHistory(true)
-            return
-          }
-        }
-      } catch {}
-    }
-
-    setHistoryLoaded(false)
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-
-    fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`, {
+async function fetchChatHistory(workspaceId: string): Promise<ChatHistoryResponse> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  try {
+    const res = await fetch(`/api/chat/history?workspaceId=${encodeURIComponent(workspaceId)}`, {
       signal: controller.signal,
     })
-      .then((r) => {
-        clearTimeout(timeoutId)
-        return r.json()
-      })
-      .then((data) => {
-        const msgs = data.messages && Array.isArray(data.messages) ? data.messages : []
-        setInitialMessages(msgs)
-        // Write to cache
-        try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ messages: msgs, ts: Date.now() }))
-        } catch {}
-      })
-      .catch(() => {
-        clearTimeout(timeoutId)
-        setInitialMessages([])
-      })
-      .finally(() => {
-        setHistoryLoaded(true)
-      })
-  }, [workspaceId, CACHE_KEY])
+    if (!res.ok) throw new Error(`Failed to load chat history (${res.status})`)
+    const data = await res.json()
+    return { messages: Array.isArray(data.messages) ? data.messages : [], conversationId: data.conversationId }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
 
-  useEffect(() => {
-    fetchHistory()
-  }, [fetchHistory])
+export default function ChatPage({ params }: { params: Promise<{ workspaceId: string }> }) {
+  const { workspaceId } = use(params)
+  const queryClient = useQueryClient()
+  const queryKey = ['chat-history', workspaceId] as const
+
+  // While the persisted (sessionStorage) cache is being read back in, treat
+  // it like still-loading rather than momentarily rendering an empty chat.
+  const isRestoring = useIsRestoring()
+
+  const { data, isPending } = useQuery({
+    queryKey,
+    queryFn: () => fetchChatHistory(workspaceId),
+  })
+
+  // Key forces ChatInterface to fully re-mount (fresh useChat() state) after clearing
+  const [chatKey, setChatKey] = useState(0)
 
   const handleHistoryCleared = useCallback(() => {
-    // Bust the cache
-    try { sessionStorage.removeItem(CACHE_KEY) } catch {}
-    setInitialMessages([])
+    queryClient.setQueryData<ChatHistoryResponse>(queryKey, { messages: [] })
     setChatKey((k) => k + 1)
-    setHistoryLoaded(true)
-  }, [CACHE_KEY])
+  }, [queryClient, workspaceId])
 
-  if (!historyLoaded) return <ChatSkeleton />
+  const handleMessageFinished = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey })
+  }, [queryClient, workspaceId])
+
+  // Only a genuinely cold cache (nothing in memory, nothing persisted yet to
+  // restore) blocks on the skeleton. A warm cache — even one being silently
+  // revalidated in the background — renders immediately with no loading flash.
+  if (isPending || isRestoring) return <ChatSkeleton />
 
   return (
     <ChatInterface
       key={chatKey}
       workspaceId={workspaceId}
-      initialMessages={initialMessages}
+      initialMessages={data?.messages ?? []}
       onHistoryCleared={handleHistoryCleared}
+      onMessageFinished={handleMessageFinished}
     />
   )
 }
