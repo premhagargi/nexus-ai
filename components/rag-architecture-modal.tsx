@@ -13,28 +13,24 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
     {
       title: '1. Intent Routing & Query Optimization',
       icon: Cpu,
-      color: 'from-blue-500 to-indigo-600',
       description: 'Cerebras LLM reformulates raw user inputs into standalone queries, stripping noise and identifying tool vs. RAG execution routes.',
       tech: ['Cerebras Cloud', 'Intent Router', 'Query Expansion'],
     },
     {
       title: '2. Vector & Hybrid Keyword Search',
       icon: Database,
-      color: 'from-purple-500 to-pink-600',
       description: 'Dual retrieval using Google GenAI 768-dim embeddings (`gemini-embedding-001`) with PostgreSQL `pgvector` Cosine Distance + TSVector FTS keyword fallback.',
       tech: ['pgvector', 'Cosine Distance <->', 'TSVector Keyword Search'],
     },
     {
       title: '3. Hybrid RERANK & Diversity Filtering',
       icon: Layers,
-      color: 'from-amber-500 to-orange-600',
       description: 'Candidates are scored using token overlap boosts, neighbor chunk expansion, and MMR (Maximal Marginal Relevance) diversity filtering.',
       tech: ['Lexical Rerank', 'Neighbor Window (+/- 1)', 'MMR Chunk Selection'],
     },
     {
       title: '4. Citation Verification & Hallucination Guardrails',
       icon: ShieldCheck,
-      color: 'from-emerald-500 to-teal-600',
       description: 'Extracted response claim sentences are token-matched against retrieved passage chunks to produce a live 0-100% Grounding Score.',
       tech: ['Claim Token Verification', 'Grounding Score', 'Source Tracking'],
     },
@@ -49,7 +45,7 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-border">
           <div>
-            <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               <Sparkles className="h-3.5 w-3.5" /> Architecture & Engine Trace
             </div>
             <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
@@ -80,11 +76,11 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
                   onClick={() => setActiveStep(idx)}
                   className={`flex flex-col items-start gap-2 p-3 rounded-lg border text-left transition-colors ${
                     isActive
-                      ? 'border-indigo-500/50 bg-indigo-500/[0.07]'
+                      ? 'border-primary/50 bg-primary/5'
                       : 'border-border bg-muted/20 hover:bg-muted/40'
                   }`}
                 >
-                  <div className={`p-1.5 rounded-md bg-gradient-to-br ${step.color} text-white shadow-sm`}>
+                  <div className="p-1.5 rounded-md bg-primary text-primary-foreground">
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <span className="text-xs font-semibold leading-snug line-clamp-2">{step.title}</span>
@@ -99,7 +95,7 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
               <h3 className="text-sm font-bold text-foreground">
                 {steps[activeStep].title}
               </h3>
-              <Badge variant="outline" className="shrink-0 border-indigo-500/30 text-indigo-500 dark:text-indigo-400 bg-indigo-500/5">
+              <Badge variant="outline" className="shrink-0">
                 Step {activeStep + 1} of {steps.length}
               </Badge>
             </div>
@@ -119,14 +115,14 @@ export function RAGArchitectureModal({ isOpen, onClose }: { isOpen: boolean; onC
           </div>
 
           {/* Code & Vector Spec Preview */}
-          <div className="rounded-lg border border-border bg-[#181825] p-4 font-mono text-xs text-indigo-200/90 leading-relaxed overflow-x-auto">
+          <div className="rounded-lg border border-border bg-[#1c1c1c] p-4 font-mono text-xs text-white/80 leading-relaxed overflow-x-auto">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-white/50">
               <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                <Network className="h-3.5 w-3.5 text-indigo-400" /> PostgreSQL Vector & Tenant Isolation SQL
+                <Network className="h-3.5 w-3.5" /> PostgreSQL Vector & Tenant Isolation SQL
               </span>
-              <span className="text-[10px] text-emerald-400 font-semibold">pgvector 0.3.0</span>
+              <span className="text-[10px] text-white/40 font-semibold">pgvector 0.3.0</span>
             </div>
-            <pre className="text-[11px] leading-5 text-indigo-300">
+            <pre className="text-[11px] leading-5 text-white/70">
 {`-- Partitioned Cosine Vector Search
 SELECT id, "documentId", content, metadata, embedding <-> $2::vector AS distance
 FROM "DocumentChunk"
@@ -140,7 +136,7 @@ LIMIT 8;`}
         {/* Footer */}
         <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-t border-border bg-muted/10">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Multi-tenant workspace isolation guaranteed
+            <CheckCircle2 className="h-3.5 w-3.5" /> Multi-tenant workspace isolation guaranteed
           </div>
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
