@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str = ""
     log_level: str = "INFO"
     environment: str = "development"
+    # /metrics is public by default (empty = no auth, matches prior behavior).
+    # Set this to require a Bearer token — needed for Grafana Cloud's agentless
+    # "Metrics Endpoint" scrape job, which refuses to scrape an unauthenticated
+    # public URL.
+    metrics_bearer_token: str = ""
 
     @property
     def cors_origins(self) -> list[str]:
